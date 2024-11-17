@@ -6,9 +6,9 @@ uniform sampler2D metallic_tex;
 uniform int texture_flags;
 uniform vec3 world_light_pos;
 uniform vec3 eye_pos;
-uniform float ambient_strength = 0.25;
-uniform float light_strength = 1.0;
-uniform float shine_strength = 20;
+uniform float ambient_strength = 0.5;
+uniform float light_strength = 1.25;
+uniform float shine_strength = 16;
 
 out vec4 f_color;
 in vec2 frag_uv;
