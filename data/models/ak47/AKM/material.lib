@@ -1,0 +1,524 @@
+# Aspose.3D Wavefront OBJ Exporter
+# Copyright 2004-2022 Aspose Pty Ltd.
+# File created: 10/12/2022 02:38:56
+
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
+newmtl Material #44
+	Ka 0.2 0.2 0.2
+	Kd 0.8 0.8 0.8
+	d 1
+	Tr 0
+	illum 2
+	Ks 0.2 0.2 0.2
+	Ns 20
