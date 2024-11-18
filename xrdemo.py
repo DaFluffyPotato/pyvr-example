@@ -13,6 +13,7 @@ from mgllib.elements import ElementSingleton
 from mgllib.model.obj import OBJ
 from mgllib.camera import Camera
 from mgllib.player_body import PlayerBody
+from mgllib.world.block import StandaloneBlock
 
 class Demo(ElementSingleton):
     def __init__(self):
@@ -30,6 +31,8 @@ class Demo(ElementSingleton):
         self.ak_obj = OBJ('data/models/ak47/ak47.obj', self.mgl.program('data/shaders/default.vert', 'data/shaders/default.frag'), centered=True)
 
         self.shiba_obj = OBJ('data/models/shiba/shiba.obj', self.mgl.program('data/shaders/default.vert', 'data/shaders/default.frag'), centered=True)
+
+        self.block = StandaloneBlock(self.mgl.program('data/shaders/default.vert', 'data/shaders/default.frag'), block_id='chiseled_stone')
 
         self.test_entity = self.journey_obj.new_entity()
         self.test_entity_2 = self.ak_obj.new_entity()
@@ -64,5 +67,7 @@ class Demo(ElementSingleton):
             self.test_entity_2.transform.pos = list(hand.pos)
             self.test_entity_2.transform.scale = [0.5, 0.5, 0.5]
             self.test_entity_2.render(self.e['XRCamera'])
+
+        self.block.render(self.e['XRCamera'])
 
 Demo().run()
