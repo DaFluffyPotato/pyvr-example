@@ -13,7 +13,7 @@ from mgllib.elements import ElementSingleton
 from mgllib.model.obj import OBJ
 from mgllib.camera import Camera
 from mgllib.player_body import PlayerBody
-from mgllib.world.block import StandaloneBlock
+from mgllib.world.world import World
 
 class Demo(ElementSingleton):
     def __init__(self):
@@ -26,17 +26,37 @@ class Demo(ElementSingleton):
     def init_mgl(self):
         self.mgl = MGL()
 
-        self.journey_obj = OBJ('data/models/journey/journey.obj', self.mgl.program('data/shaders/default.vert', 'data/shaders/default.frag'), centered=True)
-
         self.ak_obj = OBJ('data/models/ak47/ak47.obj', self.mgl.program('data/shaders/default.vert', 'data/shaders/default.frag'), centered=True)
 
-        self.shiba_obj = OBJ('data/models/shiba/shiba.obj', self.mgl.program('data/shaders/default.vert', 'data/shaders/default.frag'), centered=True)
+        self.world = World(self.mgl.program('data/shaders/default.vert', 'data/shaders/default.frag'))
 
-        self.block = StandaloneBlock(self.mgl.program('data/shaders/default.vert', 'data/shaders/default.frag'), block_id='chiseled_stone')
+        for x in range(32):
+            for z in range(32):
+                self.world.add_block('grass', (x - 16, -1, z - 16), rebuild=False)
+        
+        for y in range(4):
+            self.world.add_block('chiseled_stone', (1, y, 1), rebuild=False)
+            self.world.add_block('chiseled_stone', (-1, y, 1), rebuild=False)
+            self.world.add_block('chiseled_stone', (-1, y, -1), rebuild=False)
+            self.world.add_block('chiseled_stone', (1, y, -1), rebuild=False)
+            
+            t = 'log'
+            if y == 3:
+                t = 'chiseled_stone'
+                self.world.add_block('chiseled_stone', (1, y, 0), rebuild=False)
+                self.world.add_block('chiseled_stone', (0, y, 1), rebuild=False)
+                self.world.add_block('chiseled_stone', (-1, y, 0), rebuild=False)
+                self.world.add_block('chiseled_stone', (0, y, -1), rebuild=False)
+            self.world.add_block(t, (2, y, 2), rebuild=False)
+            self.world.add_block(t, (-2, y, 2), rebuild=False)
+            self.world.add_block(t, (-2, y, -2), rebuild=False)
+            self.world.add_block(t, (2, y, -2), rebuild=False)
+        
+        self.world.add_block('log', (4, 0, 0), rebuild=False)
 
-        self.test_entity = self.journey_obj.new_entity()
+        self.world.rebuild()
+
         self.test_entity_2 = self.ak_obj.new_entity()
-        self.test_entity_3 = self.shiba_obj.new_entity()
 
         self.e['XRCamera'].light_pos = [0.5, 1, 1]
 
@@ -50,24 +70,12 @@ class Demo(ElementSingleton):
             self.player.cycle()
         self.e['XRCamera'].cycle()
 
-        self.test_entity.render(self.e['XRCamera'])
-
-        self.test_entity_2.transform.quaternion = None
-        self.test_entity_2.transform.pos = [2.5, 0.0, 0.0]
-        self.test_entity_2.transform.scale = [0.5, 0.5, 0.5]
-        self.test_entity_2.render(self.e['XRCamera'])
-
-        self.test_entity_3.transform.quaternion = None
-        self.test_entity_3.transform.pos = [-2.5, 0.0, 0.0]
-        self.test_entity_3.transform.scale = [0.3, 0.3, 0.3]
-        self.test_entity_3.render(self.e['XRCamera'])
-
         for i, hand in enumerate(self.player.hands):
             self.test_entity_2.transform.quaternion = glm.quat(hand.aim_rot[3], *(hand.aim_rot[:3])) * glm.quat(glm.rotate(math.pi / 2, glm.vec3(0, 1, 0)))
             self.test_entity_2.transform.pos = list(hand.pos)
             self.test_entity_2.transform.scale = [0.5, 0.5, 0.5]
             self.test_entity_2.render(self.e['XRCamera'])
 
-        self.block.render(self.e['XRCamera'])
+        self.world.render(self.e['XRCamera'])
 
 Demo().run()

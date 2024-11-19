@@ -25,10 +25,14 @@ class Transform3D:
 
     @property
     def matrix(self):
+        return prep_mat(self.glmmatrix)
+        
+    @property
+    def glmmatrix(self):
         if self.swap_rot_order:
-            return prep_mat(self.translate_matrix * self.rotation_matrix * self.scale_matrix)
+            return self.translate_matrix * self.rotation_matrix * self.scale_matrix
         else:
-            return prep_mat(self.rotation_matrix * self.translate_matrix * self.scale_matrix)
+            return self.rotation_matrix * self.translate_matrix * self.scale_matrix
 
     @property
     def npmatrix(self):

@@ -39,7 +39,7 @@ class PlayerBody(ElementSingleton):
         self.snap_direction = 0
         self.snap_val = 0
 
-        self.movement_speed = 2
+        self.movement_speed = 4
 
     @property
     def left_hand(self):

@@ -1,6 +1,7 @@
 import gc
 import time
 
+import glm
 import numpy as np
 from pympler import tracker
 from OpenGL import GL
@@ -22,14 +23,20 @@ class XRCamera(ElementSingleton):
 
         self.world_matrix = None
 
-        self.light_pos = [0, 1, 0]
+        self.light_pos = [0.1, 1, 0.2]
+        self.eye_pos = [0, 0, 0]
 
     def cycle(self):
         if type(self.world_matrix) != type(None):
             # take original view matrix -> remove head offset -> apply world transform
             self.prepped_matrix = (self.world_matrix.T @ self.e['XRInput'].head_transform @ np.reshape(self.matrix.as_numpy(), (4, 4))).flatten()
+
+            # hacked eye pos (not accurate for separate eye positions; just based on head pos)
+            # only used for specular
+            self.eye_pos = [self.e['Demo'].player.world_pos.pos[0], self.pos[1], self.e['Demo'].player.world_pos.pos[2]]
         else:
             self.prepped_matrix = self.matrix.as_numpy()
+            self.eye_pos = list(self.pos)
 
 class XRState(ElementSingleton):
     def __init__(self):
