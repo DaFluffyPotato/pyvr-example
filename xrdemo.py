@@ -56,6 +56,8 @@ class Demo(ElementSingleton):
 
         self.world.rebuild()
 
+        self.world.add_block('log', (5, 0, 0), rebuild=True)
+
         self.test_entity_2 = self.ak_obj.new_entity()
 
         self.e['XRCamera'].light_pos = [0.5, 1, 1]

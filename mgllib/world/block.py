@@ -23,6 +23,9 @@ BLOCK_MAP = {
 
 BLOCK_CACHE = {}
 
+N6_OFFSETS = [(0, 0, 1), (0, 0, -1), (1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0)]
+N7_OFFSETS = [(0, 0, 1), (0, 0, -1), (1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 0)]
+
 class StandaloneBlock(Element):
     def __init__(self, program, block_id='chiseled_stone', pos=(0, 0, 0)):
         super().__init__()
@@ -90,11 +93,20 @@ class ChunkBlock(Element):
         self.block_id = block_id
         self.chunk_pos = chunk_pos
 
+        self.world_pos = tuple(v + self.chunk_pos[i] for i, v in enumerate(self.chunk.world_offset))
+
         self.generate()
 
+    @property
+    def neighbors(self):
+        return [tuple(self.world_pos[i] + v for i, v in enumerate(offset)) for offset in N6_OFFSETS]
+    
+    @property
+    def empty_neighbor_flags(self):
+        return [int(not bool(self.chunk.world.get_block(neighbor))) for neighbor in self.neighbors]
+
     def generate(self):
-        # do side flags later
-        self.buffer = BLOCK_CACHE[self.block_id].localize(chunk_pos=self.chunk_pos)
+        self.buffer = BLOCK_CACHE[self.block_id].localize(chunk_pos=self.chunk_pos, side_flags=self.empty_neighbor_flags)
 
 def populate_block_cache():
     for block_id in BLOCK_MAP:

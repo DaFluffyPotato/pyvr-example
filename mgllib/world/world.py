@@ -11,10 +11,24 @@ class World(ElementSingleton):
 
         populate_block_cache()
 
+        self.reset_rebuild()
+
+    def reset_rebuild(self):
+        self.temp_rebuild = {
+            'combines_needed': set(),
+            'rebuilt': set()
+        }
+
+    def combine_missing(self):
+        for chunk in self.temp_rebuild['combines_needed'] - self.temp_rebuild['rebuilt']:
+            chunk.combine()
+
+        self.reset_rebuild()
+
     def get_block(self, world_pos):
         chunk_id = tuple(int(world_pos[i] // CHUNK_SIZE) for i in range(3))
         if chunk_id in self.chunks:
-            return self.chunks[chunk_id]
+            return self.chunks[chunk_id].get_block(world_pos)
 
     def add_block(self, block_id, world_pos, rebuild=True):
         chunk_id = tuple(int(world_pos[i] // CHUNK_SIZE) for i in range(3))
@@ -28,9 +42,11 @@ class World(ElementSingleton):
         if chunk_id in self.chunks:
             self.chunks[chunk_id].remove_block(world_pos, rebuild=rebuild)
 
-    def rebuild(self):
+    def rebuild(self, deltas_only=False):
         for chunk in self.chunks.values():
-            chunk.rebuild()
+            chunk.rebuild(deltas_only=deltas_only)
+
+        self.combine_missing()
 
     def render(self, camera, uniforms={}):
         for chunk in self.chunks.values():
