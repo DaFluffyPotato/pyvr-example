@@ -26,7 +26,7 @@ class Demo(ElementSingleton):
     def init_mgl(self):
         self.mgl = MGL()
 
-        self.ak_obj = OBJ('data/models/ak47/ak47.obj', self.mgl.program('data/shaders/default.vert', 'data/shaders/default.frag'), centered=True)
+        self.hand_obj = OBJ('data/models/hand/hand.obj', self.mgl.program('data/shaders/default.vert', 'data/shaders/default.frag'), centered=True)
 
         self.world = World(self.mgl.program('data/shaders/default.vert', 'data/shaders/default.frag'))
 
@@ -58,7 +58,8 @@ class Demo(ElementSingleton):
 
         self.world.add_block('log', (5, 0, 0), rebuild=True)
 
-        self.test_entity_2 = self.ak_obj.new_entity()
+        self.hand_entity = self.hand_obj.new_entity()
+        self.hand_entity.transform.scale = [0.06, 0.06, 0.06]
 
         self.e['XRCamera'].light_pos = [0.5, 1, 1]
 
@@ -73,10 +74,9 @@ class Demo(ElementSingleton):
         self.e['XRCamera'].cycle()
 
         for i, hand in enumerate(self.player.hands):
-            self.test_entity_2.transform.quaternion = glm.quat(hand.aim_rot[3], *(hand.aim_rot[:3])) * glm.quat(glm.rotate(math.pi / 2, glm.vec3(0, 1, 0)))
-            self.test_entity_2.transform.pos = list(hand.pos)
-            self.test_entity_2.transform.scale = [0.5, 0.5, 0.5]
-            self.test_entity_2.render(self.e['XRCamera'])
+            self.hand_entity.transform.quaternion = glm.quat(hand.aim_rot[3], *(hand.aim_rot[:3])) * glm.quat(glm.rotate(math.pi / 2, glm.vec3(0, 1, 0)))
+            self.hand_entity.transform.pos = list(hand.pos)
+            self.hand_entity.render(self.e['XRCamera'])
 
         self.world.render(self.e['XRCamera'])
 

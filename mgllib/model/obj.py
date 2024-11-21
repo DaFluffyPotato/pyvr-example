@@ -57,6 +57,8 @@ class OBJ(Element):
         for name, material in scene.materials.items():
             points = []
 
+            if not len(material.vertex_format):
+                continue
             fmt = VertexFormat(material.vertex_format)
 
             for i in range(len(material.vertices) // fmt.length):

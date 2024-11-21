@@ -6,6 +6,7 @@ import glm
 from .xrinput import Controller
 from .mat3d import Transform3D, quat_to_mat
 from .shapes.cuboid import FloorCuboid, CornerCuboid, NO_COLLISIONS
+from .world.const import BLOCK_SCALE
 from .elements import ElementSingleton, Element
 
 '''
@@ -43,14 +44,20 @@ class PlayerBody(ElementSingleton):
         self.movement_speed = 4
 
         # funny minecraft dimensions
-        self.size = [0.6, 1.8, 0.6]
+        self.size = [0.6 * BLOCK_SCALE, 1.8, 0.6 * BLOCK_SCALE]
 
         self.cuboid = FloorCuboid(self.world_pos.pos, self.size)
 
         self.last_collisions = NO_COLLISIONS.copy()
+
+        self.gravity = 9.81 # m/s^2
+        self.velocity = glm.vec3(0.0, 0.0, 0.0)
+        self.terminal_velocity = 19
+        self.air_time = 0
+        self.jump_force = 4.25
     
     def move(self, movement):
-        blockers = [CornerCuboid(block.scaled_world_pos, (block.scale, block.scale, block.scale)) for block in self.e['World'].nearby_blocks(self.cuboid.origin, radii=(1, 2, 1))]
+        blockers = [CornerCuboid(block.scaled_world_pos, (block.scale, block.scale, block.scale)) for block in self.e['World'].nearby_blocks(self.cuboid.origin, radii=(1, 3, 1))]
         self.last_collisions = self.cuboid.move(movement, blockers)
         self.world_pos.pos = list(self.cuboid.origin)
 
@@ -88,12 +95,27 @@ class PlayerBody(ElementSingleton):
             self.snap_direction = 0
         self.snap_val = snap_val
 
-        movement_vec.x += self.e['XRInput'].head_movement[0]
-        movement_vec.z += self.e['XRInput'].head_movement[2]
+        self.velocity.y = max(-self.terminal_velocity, self.velocity.y - self.gravity * self.e['XRWindow'].dt)
+
+        if self.right_hand.pressed_lower and (self.air_time < 0.25):
+            self.velocity.y = self.jump_force
+
+        movement_vec.x += self.e['XRInput'].head_movement[0] + self.velocity.x * self.e['XRWindow'].dt
+        movement_vec.y += self.velocity.y * self.e['XRWindow'].dt
+        movement_vec.z += self.e['XRInput'].head_movement[2] + self.velocity.z * self.e['XRWindow'].dt
         # all movement at this point is from the perspective of the headset, so the player world rotation needs to be applied
         self.world_movement = self.world_pos.rotation_matrix * movement_vec
 
         self.move(list(self.world_movement))
+
+        if self.last_collisions['bottom']:
+            self.velocity.y = 0
+            self.air_time = 0
+        else:
+            self.air_time += self.e['XRWindow'].dt
+
+        if self.last_collisions['top']:
+            self.velocity.y = 0
 
         self.left_hand.transform(self.world_pos)
         self.right_hand.transform(self.world_pos)

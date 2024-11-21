@@ -17,12 +17,22 @@ class Controller(Element):
         self.aim_pos = (0, 0, 0)
         self.aim_rot = (0, 0, 0, 1)
 
+        self.pressed_upper = False
+        self.holding_upper = False
+        self.pressed_lower = False
+        self.holding_lower = False
+
     def copy_to(self, controller):
         controller.tracked = self.tracked
         controller.pos = self.pos
         controller.rot = self.rot
         controller.aim_pos = self.aim_pos
         controller.aim_rot = self.aim_rot
+
+        controller.pressed_upper = self.pressed_upper
+        controller.holding_upper = self.holding_upper
+        controller.pressed_lower = self.pressed_lower
+        controller.holding_lower = self.holding_lower
 
     def transform(self, transform):
         # translate
@@ -123,12 +133,44 @@ class XRInput(ElementSingleton):
             subaction_paths=None,
         ))
 
+        self.right_lower_button = xr.create_action(action_set=self.action_set, create_info=xr.ActionCreateInfo(
+            action_type=xr.ActionType.BOOLEAN_INPUT,
+            action_name='right_lower_button',
+            localized_action_name='Right Lower Button',
+            count_subaction_paths=0,
+            subaction_paths=None,
+        ))
+
+        self.right_upper_button = xr.create_action(action_set=self.action_set, create_info=xr.ActionCreateInfo(
+            action_type=xr.ActionType.BOOLEAN_INPUT,
+            action_name='right_upper_button',
+            localized_action_name='Right Upper Button',
+            count_subaction_paths=0,
+            subaction_paths=None,
+        ))
+
+        self.left_lower_button = xr.create_action(action_set=self.action_set, create_info=xr.ActionCreateInfo(
+            action_type=xr.ActionType.BOOLEAN_INPUT,
+            action_name='left_lower_button',
+            localized_action_name='Left Lower Button',
+            count_subaction_paths=0,
+            subaction_paths=None,
+        ))
+
+        self.left_upper_button = xr.create_action(action_set=self.action_set, create_info=xr.ActionCreateInfo(
+            action_type=xr.ActionType.BOOLEAN_INPUT,
+            action_name='left_upper_button',
+            localized_action_name='Left Upper Button',
+            count_subaction_paths=0,
+            subaction_paths=None,
+        ))
+
         self.left_stick = None
         self.right_stick = None
 
         # docs suggest that /thumbstick as a vector2 may be necessary for some controllers
 
-        self.suggested_bindings = (xr.ActionSuggestedBinding * 8)(
+        self.suggested_bindings = (xr.ActionSuggestedBinding * 12)(
             xr.ActionSuggestedBinding(action=controller_pose_action, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/left/input/grip/pose")),
             xr.ActionSuggestedBinding(action=controller_pose_action, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/right/input/grip/pose")),
             xr.ActionSuggestedBinding(action=controller_aim_pose_action, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/left/input/aim/pose")),
@@ -136,7 +178,11 @@ class XRInput(ElementSingleton):
             xr.ActionSuggestedBinding(action=self.left_stick_x_action, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/left/input/thumbstick/x")),
             xr.ActionSuggestedBinding(action=self.left_stick_y_action, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/left/input/thumbstick/y")),
             xr.ActionSuggestedBinding(action=self.right_stick_x_action, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/right/input/thumbstick/x")),
-            xr.ActionSuggestedBinding(action=self.right_stick_y_action, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/right/input/thumbstick/y")))
+            xr.ActionSuggestedBinding(action=self.right_stick_y_action, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/right/input/thumbstick/y")),
+            xr.ActionSuggestedBinding(action=self.right_lower_button, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/right/input/a/click")),
+            xr.ActionSuggestedBinding(action=self.right_upper_button, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/right/input/b/click")),
+            xr.ActionSuggestedBinding(action=self.left_lower_button, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/left/input/x/click")),
+            xr.ActionSuggestedBinding(action=self.left_upper_button, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/left/input/y/click")))
 
         self.suggest_bindings()
 
@@ -248,3 +294,19 @@ class XRInput(ElementSingleton):
             right_stick_x = xr.get_action_state_float(session=self.session, get_info=xr.ActionStateGetInfo(action=self.right_stick_x_action, subaction_path=xr.NULL_PATH)).current_state
             right_stick_y = xr.get_action_state_float(session=self.session, get_info=xr.ActionStateGetInfo(action=self.left_stick_x_action, subaction_path=xr.NULL_PATH)).current_state
             self.right_stick = (right_stick_x, right_stick_y)
+
+            left_lower = xr.get_action_state_boolean(session=self.session, get_info=xr.ActionStateGetInfo(action=self.left_lower_button, subaction_path=xr.NULL_PATH))
+            self.hands[0].holding_lower = left_lower.current_state
+            self.hands[0].pressed_lower = left_lower.current_state and left_lower.changed_since_last_sync
+
+            left_upper = xr.get_action_state_boolean(session=self.session, get_info=xr.ActionStateGetInfo(action=self.left_upper_button, subaction_path=xr.NULL_PATH))
+            self.hands[0].holding_upper = left_upper.current_state
+            self.hands[0].pressed_upper = left_upper.current_state and left_lower.changed_since_last_sync
+
+            right_lower = xr.get_action_state_boolean(session=self.session, get_info=xr.ActionStateGetInfo(action=self.right_lower_button, subaction_path=xr.NULL_PATH))
+            self.hands[1].holding_lower = right_lower.current_state
+            self.hands[1].pressed_lower = right_lower.current_state and right_lower.changed_since_last_sync
+
+            right_upper = xr.get_action_state_boolean(session=self.session, get_info=xr.ActionStateGetInfo(action=self.right_upper_button, subaction_path=xr.NULL_PATH))
+            self.hands[1].holding_upper = right_upper.current_state
+            self.hands[1].pressed_upper = right_upper.current_state and right_upper.changed_since_last_sync

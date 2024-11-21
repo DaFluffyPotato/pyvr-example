@@ -33,7 +33,7 @@ class XRCamera(ElementSingleton):
 
             # hacked eye pos (not accurate for separate eye positions; just based on head pos)
             # only used for specular
-            self.eye_pos = [self.e['Demo'].player.world_pos.pos[0], self.pos[1], self.e['Demo'].player.world_pos.pos[2]]
+            self.eye_pos = [self.e['Demo'].player.world_pos.pos[0], self.pos[1] + self.e['Demo'].player.world_pos.pos[1], self.e['Demo'].player.world_pos.pos[2]]
         else:
             self.prepped_matrix = self.matrix.as_numpy()
             self.eye_pos = list(self.pos)
