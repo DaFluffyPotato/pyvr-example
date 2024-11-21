@@ -6,6 +6,7 @@ from ..elements import Element
 from .coord_gen import gen_cube
 from ..mat3d import Transform3D
 from ..model.vao import TexturedVAOs
+from .const import BLOCK_SCALE
 
 def flatten(lss):
     return [x for ls in lss for x in ls]
@@ -94,6 +95,8 @@ class ChunkBlock(Element):
         self.chunk_pos = chunk_pos
 
         self.world_pos = tuple(v + self.chunk_pos[i] for i, v in enumerate(self.chunk.world_offset))
+        self.scaled_world_pos = tuple(v * BLOCK_SCALE for v in self.world_pos)
+        self.scale = BLOCK_SCALE
 
         self.generate()
 

@@ -4,9 +4,7 @@ from ..elements import Element
 from .block import ChunkBlock, CACHE, N7_OFFSETS
 from ..model.vao import TexturedVAOs
 from ..mat3d import Transform3D
-
-CHUNK_SIZE = 16
-BLOCK_SCALE = 0.75
+from .const import CHUNK_SIZE, BLOCK_SCALE
 
 class Chunk(Element):
     def __init__(self, parent, chunk_id):

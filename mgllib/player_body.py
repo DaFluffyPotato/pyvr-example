@@ -5,6 +5,7 @@ import glm
 
 from .xrinput import Controller
 from .mat3d import Transform3D, quat_to_mat
+from .shapes.cuboid import FloorCuboid, CornerCuboid, NO_COLLISIONS
 from .elements import ElementSingleton, Element
 
 '''
@@ -40,6 +41,18 @@ class PlayerBody(ElementSingleton):
         self.snap_val = 0
 
         self.movement_speed = 4
+
+        # funny minecraft dimensions
+        self.size = [0.6, 1.8, 0.6]
+
+        self.cuboid = FloorCuboid(self.world_pos.pos, self.size)
+
+        self.last_collisions = NO_COLLISIONS.copy()
+    
+    def move(self, movement):
+        blockers = [CornerCuboid(block.scaled_world_pos, (block.scale, block.scale, block.scale)) for block in self.e['World'].nearby_blocks(self.cuboid.origin, radii=(1, 2, 1))]
+        self.last_collisions = self.cuboid.move(movement, blockers)
+        self.world_pos.pos = list(self.cuboid.origin)
 
     @property
     def left_hand(self):
@@ -79,8 +92,8 @@ class PlayerBody(ElementSingleton):
         movement_vec.z += self.e['XRInput'].head_movement[2]
         # all movement at this point is from the perspective of the headset, so the player world rotation needs to be applied
         self.world_movement = self.world_pos.rotation_matrix * movement_vec
-        self.world_pos.pos[0] += self.world_movement.x
-        self.world_pos.pos[2] += self.world_movement.z
+
+        self.move(list(self.world_movement))
 
         self.left_hand.transform(self.world_pos)
         self.right_hand.transform(self.world_pos)
