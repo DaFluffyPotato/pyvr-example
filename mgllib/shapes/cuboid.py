@@ -67,6 +67,9 @@ class Cuboid:
                     return True
         return False
     
+    def collidepoint(self, point):
+        return (self.left < point[0] < self.right) and (self.bottom < point[1] < self.top) and (self.back < point[2] < self.front)
+    
     def collision_check(self, blockers):
         for blocker in blockers:
             if self.collidecuboid(blocker):

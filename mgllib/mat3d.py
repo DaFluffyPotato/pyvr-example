@@ -18,6 +18,12 @@ class Transform3D:
         if self.quaternion:
             return glm.mat4(self.quaternion)
         return euler_rotate_matrix(self.rotation)
+    
+    @property
+    def rotation_quat(self):
+        if self.quaternion:
+            return self.quaternion
+        return glm.quat(self.rotation_matrix)
 
     @property
     def scale_matrix(self):
@@ -75,6 +81,12 @@ def unflatten_matrix(matrix):
         return np.array(matrix).reshape(-1, 3)
     elif len(matrix) == 4 * 4:
         return np.array(matrix).reshape(-1, 4)
+    
+def quat_scale(quat, amount):
+    no_rot = glm.quat(1.0, 0.0, 0.0, 0.0)
+    amount = max(0, min(1, amount * 0.5))
+    quat_2x = quat * quat
+    return glm.mix(no_rot, quat_2x, amount)
 
 # https://math.stackexchange.com/questions/237369/given-this-transformation-matrix-how-do-i-decompose-it-into-translation-rotati
 def extract_rotation(mat3):

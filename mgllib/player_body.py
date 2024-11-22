@@ -37,6 +37,8 @@ class PlayerBody(ElementSingleton):
         self.world_movement = glm.vec3(0.0, 0.0, 0.0)
 
         self.hands = [Controller(0), Controller(1)]
+        for hand in self.hands:
+            hand.parent = self
 
         self.snap_direction = 0
         self.snap_val = 0
@@ -70,6 +72,9 @@ class PlayerBody(ElementSingleton):
         return self.hands[1]
 
     def cycle(self):
+        for hand in self.hands:
+            hand.log_state()
+
         self.e['XRInput'].left_hand.copy_to(self.left_hand)
         self.e['XRInput'].right_hand.copy_to(self.right_hand)
 

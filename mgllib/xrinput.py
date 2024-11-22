@@ -5,10 +5,32 @@ import glm
 import xr
 
 from .elements import ElementSingleton, Element
+from .mat3d import quat_scale
+from .const import TRIGGER_THRESHOLD
+
+class FloatButton(Element):
+    def __init__(self, button_type):
+        self.type = button_type
+        self.value = 0
+        self.pressed = False
+        self.holding = False
+
+    def update(self, value):
+        self.pressed = False
+        if self.value > TRIGGER_THRESHOLD:
+            if not self.holding:
+                self.pressed = True
+            self.holding = True
+        else:
+            self.holding = False
+        
+        self.value = value
 
 class Controller(Element):
     def __init__(self, hand):
         super().__init__()
+
+        self.parent = None
 
         self.hand = hand
         self.tracked = False
@@ -22,6 +44,39 @@ class Controller(Element):
         self.pressed_lower = False
         self.holding_lower = False
 
+        self.interacting = None
+
+        self.squeeze = FloatButton('squeeze')
+        self.trigger = FloatButton('trigger')
+
+        self.log = []
+
+    def log_state(self):
+        self.log.append((glm.vec3(self.pos), self.glm_quat, glm.vec3(self.aim_pos), self.aim_glm_quat, self.e['XRWindow'].dt))
+        self.log = self.log[-50:]
+
+    def velocity(self, timeframe):
+        if len(self.log):
+            total_time = 0
+            for sample in self.log[::-1]:
+                total_time += sample[4]
+                if total_time >= timeframe:
+                    break
+            return (glm.vec3(self.pos) - sample[0]) / total_time
+        return glm.vec3(0.0, 0.0, 0.0)
+    
+    def angular_velocity(self, timeframe):
+        # angular difference (q1 -> q2) is q2 * inv(q1)
+        # scaling rotation is q ^ scale
+        if len(self.log):
+            total_time = 0
+            for sample in self.log[::-1]:
+                total_time += sample[4]
+                if total_time >= timeframe:
+                    break
+            return quat_scale(self.aim_glm_quat * glm.inverse(sample[3]), 1 / total_time)
+        return glm.vec3(0.0, 0.0, 0.0)
+
     def copy_to(self, controller):
         controller.tracked = self.tracked
         controller.pos = self.pos
@@ -33,6 +88,9 @@ class Controller(Element):
         controller.holding_upper = self.holding_upper
         controller.pressed_lower = self.pressed_lower
         controller.holding_lower = self.holding_lower
+
+        controller.squeeze = self.squeeze
+        controller.trigger = self.trigger
 
     def transform(self, transform):
         # translate
@@ -165,12 +223,44 @@ class XRInput(ElementSingleton):
             subaction_paths=None,
         ))
 
+        self.left_squeeze = xr.create_action(action_set=self.action_set, create_info=xr.ActionCreateInfo(
+            action_type=xr.ActionType.FLOAT_INPUT,
+            action_name='left_squeeze',
+            localized_action_name='Left Squeeze',
+            count_subaction_paths=0,
+            subaction_paths=None,
+        ))
+
+        self.left_trigger = xr.create_action(action_set=self.action_set, create_info=xr.ActionCreateInfo(
+            action_type=xr.ActionType.FLOAT_INPUT,
+            action_name='left_trigger',
+            localized_action_name='Left Trigger',
+            count_subaction_paths=0,
+            subaction_paths=None,
+        ))
+
+        self.right_squeeze = xr.create_action(action_set=self.action_set, create_info=xr.ActionCreateInfo(
+            action_type=xr.ActionType.FLOAT_INPUT,
+            action_name='right_squeeze',
+            localized_action_name='Right Squeeze',
+            count_subaction_paths=0,
+            subaction_paths=None,
+        ))
+
+        self.right_trigger = xr.create_action(action_set=self.action_set, create_info=xr.ActionCreateInfo(
+            action_type=xr.ActionType.FLOAT_INPUT,
+            action_name='right_trigger',
+            localized_action_name='Right Trigger',
+            count_subaction_paths=0,
+            subaction_paths=None,
+        ))
+
         self.left_stick = None
         self.right_stick = None
 
         # docs suggest that /thumbstick as a vector2 may be necessary for some controllers
 
-        self.suggested_bindings = (xr.ActionSuggestedBinding * 12)(
+        self.suggested_bindings = (xr.ActionSuggestedBinding * 16)(
             xr.ActionSuggestedBinding(action=controller_pose_action, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/left/input/grip/pose")),
             xr.ActionSuggestedBinding(action=controller_pose_action, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/right/input/grip/pose")),
             xr.ActionSuggestedBinding(action=controller_aim_pose_action, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/left/input/aim/pose")),
@@ -182,7 +272,11 @@ class XRInput(ElementSingleton):
             xr.ActionSuggestedBinding(action=self.right_lower_button, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/right/input/a/click")),
             xr.ActionSuggestedBinding(action=self.right_upper_button, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/right/input/b/click")),
             xr.ActionSuggestedBinding(action=self.left_lower_button, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/left/input/x/click")),
-            xr.ActionSuggestedBinding(action=self.left_upper_button, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/left/input/y/click")))
+            xr.ActionSuggestedBinding(action=self.left_upper_button, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/left/input/y/click")),
+            xr.ActionSuggestedBinding(action=self.left_squeeze, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/left/input/squeeze/value")),
+            xr.ActionSuggestedBinding(action=self.left_trigger, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/left/input/trigger/value")),
+            xr.ActionSuggestedBinding(action=self.right_squeeze, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/right/input/squeeze/value")),
+            xr.ActionSuggestedBinding(action=self.right_trigger, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/right/input/trigger/value")))
 
         self.suggest_bindings()
 
@@ -310,3 +404,8 @@ class XRInput(ElementSingleton):
             right_upper = xr.get_action_state_boolean(session=self.session, get_info=xr.ActionStateGetInfo(action=self.right_upper_button, subaction_path=xr.NULL_PATH))
             self.hands[1].holding_upper = right_upper.current_state
             self.hands[1].pressed_upper = right_upper.current_state and right_upper.changed_since_last_sync
+
+            self.hands[0].squeeze.update(xr.get_action_state_float(session=self.session, get_info=xr.ActionStateGetInfo(action=self.left_squeeze, subaction_path=xr.NULL_PATH)).current_state)
+            self.hands[0].trigger.update(xr.get_action_state_float(session=self.session, get_info=xr.ActionStateGetInfo(action=self.left_trigger, subaction_path=xr.NULL_PATH)).current_state)
+            self.hands[1].squeeze.update(xr.get_action_state_float(session=self.session, get_info=xr.ActionStateGetInfo(action=self.right_squeeze, subaction_path=xr.NULL_PATH)).current_state)
+            self.hands[1].trigger.update(xr.get_action_state_float(session=self.session, get_info=xr.ActionStateGetInfo(action=self.right_trigger, subaction_path=xr.NULL_PATH)).current_state)

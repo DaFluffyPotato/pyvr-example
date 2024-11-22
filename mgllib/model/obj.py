@@ -1,6 +1,7 @@
 import os
 
 import pywavefront
+import moderngl
 
 from .geometry import Geometry
 from .vao import TexturedVAOs, TEXTURE_CATEGORIES
@@ -31,11 +32,13 @@ class VertexFormat:
         self.length = offset
 
 class OBJ(Element):
-    def __init__(self, path, program, centered=True):
+    def __init__(self, path, program, centered=True, pixelated=True):
         super().__init__()
 
         self.vao = None
         self.bounds = None
+
+        self.pixelated = pixelated
         
         self.load(path, program, centered=centered)
 
@@ -69,6 +72,8 @@ class OBJ(Element):
         geometry = Geometry(matwise_verts)
         if centered:
             geometry.center(rescale=True)
+        else:
+            geometry.get_bounds()
         if fmt:
             self.vao = TexturedVAOs(program, geometry.build(self.e['MGL'].ctx, program, fmt))
             
@@ -78,10 +83,16 @@ class OBJ(Element):
                 if file.split('.')[-1] == 'png':
                     file_suffix = file.split('_')[-1].split('.')[0]
                     if file_suffix in TEXTURE_CATEGORIES:
-                        self.vao.bind_texture(self.e['MGL'].load_texture(base_path + '/' + file), file_suffix)
+                        tex = self.e['MGL'].load_texture(base_path + '/' + file)
+                        if self.pixelated:
+                            tex.filter = moderngl.NEAREST, moderngl.NEAREST
+                        self.vao.bind_texture(tex, file_suffix)
                     # check base texture case
                     if file.split('.')[0] == path.split('/')[-1].split('.')[0]:
-                        self.vao.bind_texture(self.e['MGL'].load_texture(base_path + '/' + file), 'texture')
+                        tex = self.e['MGL'].load_texture(base_path + '/' + file)
+                        if self.pixelated:
+                            tex.filter = moderngl.NEAREST, moderngl.NEAREST
+                        self.vao.bind_texture(tex, 'texture')
         self.bounds = geometry.bounds
 
     def new_entity(self):

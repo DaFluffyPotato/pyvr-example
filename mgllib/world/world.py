@@ -42,6 +42,12 @@ class World(ElementSingleton):
                     if block:
                         blocks.append(block)
         return blocks
+    
+    # takes floating world pos instead of grid pos
+    def check_block(self, world_pos):
+        base_pos = tuple(int(world_pos[i] // BLOCK_SCALE) for i in range(3))
+        block = self.get_block(base_pos)
+        return block
 
     def add_block(self, block_id, world_pos, rebuild=True):
         chunk_id = tuple(int(world_pos[i] // CHUNK_SIZE) for i in range(3))

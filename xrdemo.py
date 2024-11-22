@@ -15,6 +15,7 @@ from mgllib.camera import Camera
 from mgllib.player_body import PlayerBody
 from mgllib.world.world import World
 from mgllib.skybox import Skybox
+from mgllib.vritem import Knife
 
 class Demo(ElementSingleton):
     def __init__(self):
@@ -27,11 +28,17 @@ class Demo(ElementSingleton):
     def init_mgl(self):
         self.mgl = MGL()
 
-        self.hand_obj = OBJ('data/models/hand/hand.obj', self.mgl.program('data/shaders/default.vert', 'data/shaders/default.frag'), centered=True)
+        self.main_shader = self.mgl.program('data/shaders/default.vert', 'data/shaders/default.frag')
 
-        self.world = World(self.mgl.program('data/shaders/default.vert', 'data/shaders/default.frag'))
+        self.hand_obj = OBJ('data/models/hand/hand.obj', self.main_shader, centered=True)
+
+        self.world = World(self.main_shader)
 
         self.skybox = Skybox('data/textures/skybox', self.mgl.program('data/shaders/skybox.vert', 'data/shaders/skybox.frag'))
+
+        self.knife_res = OBJ('data/models/knife/knife.obj', self.main_shader, centered=False)
+        
+        self.knives = [Knife(self.knife_res, (0, 1, i - 5)) for i in range(10)]
 
         for x in range(32):
             for z in range(32):
@@ -71,12 +78,23 @@ class Demo(ElementSingleton):
     def run(self):
         self.window.run()
 
+    def single_update(self):
+        self.player.cycle()
+        for knife in self.knives:
+            for hand in self.player.hands:
+                knife.handle_interactions(hand)
+            knife.update()
+
     def update(self, view_index):
         if view_index == 0:
-            self.player.cycle()
+            self.single_update()
+
         self.e['XRCamera'].cycle()
 
         self.skybox.render(self.e['XRCamera'])
+
+        for knife in self.knives:
+            knife.render(self.e['XRCamera'])
 
         for i, hand in enumerate(self.player.hands):
             self.hand_entity.transform.quaternion = glm.quat(hand.aim_rot[3], *(hand.aim_rot[:3])) * glm.quat(glm.rotate(math.pi / 2, glm.vec3(0, 1, 0)))
