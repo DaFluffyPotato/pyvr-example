@@ -14,6 +14,7 @@ from mgllib.model.obj import OBJ
 from mgllib.camera import Camera
 from mgllib.player_body import PlayerBody
 from mgllib.world.world import World
+from mgllib.skybox import Skybox
 
 class Demo(ElementSingleton):
     def __init__(self):
@@ -29,6 +30,8 @@ class Demo(ElementSingleton):
         self.hand_obj = OBJ('data/models/hand/hand.obj', self.mgl.program('data/shaders/default.vert', 'data/shaders/default.frag'), centered=True)
 
         self.world = World(self.mgl.program('data/shaders/default.vert', 'data/shaders/default.frag'))
+
+        self.skybox = Skybox('data/textures/skybox', self.mgl.program('data/shaders/skybox.vert', 'data/shaders/skybox.frag'))
 
         for x in range(32):
             for z in range(32):
@@ -72,6 +75,8 @@ class Demo(ElementSingleton):
         if view_index == 0:
             self.player.cycle()
         self.e['XRCamera'].cycle()
+
+        self.skybox.render(self.e['XRCamera'])
 
         for i, hand in enumerate(self.player.hands):
             self.hand_entity.transform.quaternion = glm.quat(hand.aim_rot[3], *(hand.aim_rot[:3])) * glm.quat(glm.rotate(math.pi / 2, glm.vec3(0, 1, 0)))

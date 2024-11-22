@@ -120,4 +120,5 @@ class PlayerBody(ElementSingleton):
         self.left_hand.transform(self.world_pos)
         self.right_hand.transform(self.world_pos)
 
+        self.e['XRCamera'].world_rotation = list(self.world_pos.rotation)
         self.e['XRCamera'].world_matrix = np.linalg.inv(self.world_pos.npmatrix)

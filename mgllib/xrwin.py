@@ -20,8 +20,10 @@ class XRCamera(ElementSingleton):
 
         self.matrix = None
         self.prepped_matrix = None
+        self.sky_matrix = None
 
         self.world_matrix = None
+        self.world_rotation = [0, 0, 0]
 
         self.light_pos = [0.1, 1, 0.2]
         self.eye_pos = [0, 0, 0]
@@ -37,6 +39,8 @@ class XRCamera(ElementSingleton):
         else:
             self.prepped_matrix = self.matrix.as_numpy()
             self.eye_pos = list(self.pos)
+
+        self.sky_matrix = self.matrix.as_numpy()
 
 class XRState(ElementSingleton):
     def __init__(self):

@@ -4,6 +4,7 @@ import pygame
 
 from .util import read_f
 from .elements import ElementSingleton
+from .const import SKYBOX_DIRECTIONS
 
 class MGL(ElementSingleton):
     def __init__(self, share=False):
@@ -19,6 +20,17 @@ class MGL(ElementSingleton):
     def load_texture(self, path, swizzle=True):
         img = Image.open(path).convert('RGBA').transpose(Image.FLIP_TOP_BOTTOM)
         return self.ctx.texture(img.size, components=4, data=img.tobytes())
+    
+    def load_cubemap(self, base_path):
+        images = []
+        for direction in SKYBOX_DIRECTIONS:
+            images.append(Image.open(f'{base_path}_{direction}.png').convert('RGBA'))
+
+        skybox_data = b''
+        for img in images:
+            skybox_data += img.tobytes()
+
+        return self.ctx.texture_cube(images[0].size, components=4, data=skybox_data)
     
     def tx2pg(self, tex):
         surf = pygame.image.frombytes(tex.read(), tex.size, 'RGBA', True)
