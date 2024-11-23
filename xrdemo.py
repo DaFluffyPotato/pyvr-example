@@ -100,7 +100,10 @@ class Demo(ElementSingleton):
 
         for i, hand in enumerate(self.player.hands):
             self.hand_entity.transform.quaternion = glm.quat(hand.aim_rot[3], *(hand.aim_rot[:3])) * glm.quat(glm.rotate(math.pi / 2, glm.vec3(0, 1, 0)))
-            self.hand_entity.transform.pos = list(hand.pos)
+            if hand.interacting and (hand.interacting.parent.alt_grip == hand.interacting):
+                self.hand_entity.transform.pos = hand.interacting.world_pos
+            else:    
+                self.hand_entity.transform.pos = list(hand.pos)
             self.hand_entity.render(self.e['XRCamera'])
 
         self.world.render(self.e['XRCamera'])

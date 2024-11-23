@@ -13,11 +13,12 @@ class VRItemComponent(Element):
 
 # the two types are grip and interact (grib vs trigger)
 class VRItemPoint(Element):
-    def __init__(self, point_type, pos, default=False):
+    def __init__(self, point_type, pos, radius=0.3, default=False):
         self.parent = None
         self.type = point_type
         self.pos = glm.vec3(pos)
         self.default = default
+        self.radius = radius
 
         self.local_rotation = glm.quat(1.0, 0.0, 0.0, 0.0)
 
@@ -27,6 +28,10 @@ class VRItemPoint(Element):
         self.interacting = None
 
     @property
+    def scaled_pos(self):
+        return self.pos * self.parent.scale
+
+    @property
     def world_pos(self):
         return self.parent.transform * self.pos
     
@@ -34,31 +39,53 @@ class VRItemPoint(Element):
         if self.type == 'grip':
             if not (hand.interacting or self.interacting):
                 hand.interacting = self
-                self.parent.primary_grip = self
                 self.interacting = hand
                 self.parent.velocity_reset()
                 self.parent.floor_mode = False
+
+                # handle grip arrangement
+                if not self.parent.primary_grip:
+                    self.parent.primary_grip = self
+                elif self.parent.default_grip == self:
+                    # move old primary to alt because this point is the default
+                    self.parent.alt_grip = self.parent.primary_grip
+                    self.parent.primary_grip = self
+                else:
+                    # primary is taken and this isn't the default, so make self the alt grip
+                    self.parent.alt_grip = self
     
     def update(self, hand):
         if hand.interacting == self:
             if hand.squeeze.holding:    
                 self.input_pos = glm.vec3(hand.pos)
                 self.input_rotation = glm.quat(hand.aim_rot[3], *(hand.aim_rot[:3]))
-            elif self.parent.primary_grip == self:
+            elif (self.parent.primary_grip == self) or (self.parent.alt_grip == self):
                 hand.interacting = None
-                self.parent.primary_grip = None
+                if self.parent.primary_grip == self:
+                    if self.parent.alt_grip:
+                        # make alt grip primary
+                        self.parent.primary_grip = self.parent.alt_grip
+                        self.parent.alt_grip = None
+                    else:
+                        self.parent.primary_grip = None
+
+                        # handle throw because this is was the last grip
+                        self.parent.velocity = vec3_exponent(hand.velocity(HAND_VELOCITY_TIMEFRAME), 1.7) / self.parent.weight
+
+                        # angular velocity must be adjusted for snap turn orientation
+                        self.parent.angular_velocity = hand.angular_velocity(HAND_VELOCITY_TIMEFRAME)
+
+                        self.parent.rotation = self.input_rotation
+
+                        # undo pivot placement by finding origin offset after the transform
+                        origin = glm.vec3(0.0, 0.0, 0.0)
+                        #interaction_point_offset = (self.parent.transform * origin) - self.world_pos
+                        self.parent.pos = self.parent.transform * origin
+                else:
+                    # this must be an alt grip
+                    self.parent.alt_grip = None
+
                 self.interacting = None
-                self.parent.velocity = vec3_exponent(hand.velocity(HAND_VELOCITY_TIMEFRAME), 1.7) / self.parent.weight
-
-                # angular velocity must be adjusted for snap turn orientation
-                self.parent.angular_velocity = hand.angular_velocity(HAND_VELOCITY_TIMEFRAME)
-
-                self.parent.rotation = self.input_rotation
-
-                # undo pivot placement by finding origin offset after the transform
-                origin = glm.vec3(0.0, 0.0, 0.0)
-                #interaction_point_offset = (self.parent.transform * origin) - self.world_pos
-                self.parent.pos = self.parent.transform * origin
 
 class VRItem(Element):
     def __init__(self, base_obj, pos=None):
@@ -228,8 +255,18 @@ class VRItem(Element):
                 translation = glm.translate(self.primary_grip.input_pos)
                 self.transform = translation * glm.mat4(rotation) * scale_mat * glm.translate(inverse_pivot)
             else:
-                # take up vector from primary grip and use lookat for alt
-                pass
+                # take up vector from primary grip to handle the roll of the aim
+                up = glm.mat4(self.primary_grip.input_rotation) * glm.vec3(0, 1, 0)
+                # look from the primary grip to the alt to get a rotation to line up grip points along Z axis
+                grip_target = self.alt_grip.scaled_pos - self.primary_grip.scaled_pos
+                local_rotation = glm.lookAt(glm.vec3(0.0, 0.0, 0.0), grip_target, glm.vec3(0.0, 1.0, 0.0))
+                # get angle between hands to get world rotation of the object
+                target = self.alt_grip.input_pos - self.primary_grip.input_pos
+                # camera matrices are inverted, so it needs to be uninverted to get an object orientation
+                rotation = glm.inverse(glm.lookAt(glm.vec3(0.0, 0.0, 0.0), target, up))
+                # generate transform
+                translation = glm.translate(self.primary_grip.input_pos)
+                self.transform = translation * rotation * local_rotation * scale_mat * glm.translate(inverse_pivot)
         else:
             self.transform = glm.translate(self.pos) * glm.mat4(self.spin) * glm.mat4(self.rotation) * scale_mat
 
@@ -240,7 +277,11 @@ class VRItem(Element):
                 if hand.squeeze.pressed:
                     self.default_grip.grab(hand)
 
-        # TODO: implement logic when simple_grab is disabled
+        else:
+            for point in self.points['grip']:
+                if sphere_collide(hand_pos, point.world_pos, point.radius):
+                    if hand.squeeze.pressed:
+                        point.grab(hand)
         
         for point in self.points['grip']:
             point.update(hand)
@@ -278,5 +319,7 @@ class M4(VRItem):
         self.floor_item = True
 
         self.add_point(VRItemPoint('grip', (0, -0.26, 0.735), default=True))
+
+        self.add_point(VRItemPoint('grip', (0, 0, -0.735)))
 
         self.simple_grab = 0.5
