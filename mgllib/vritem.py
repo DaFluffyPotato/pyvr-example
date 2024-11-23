@@ -4,7 +4,7 @@ from .model.entity3d import Entity3D
 from .shapes.cuboid import CornerCuboid
 from .shapes.sphere import sphere_collide
 from .elements import Element
-from .mat3d import prep_mat, quat_scale
+from .mat3d import prep_mat, quat_scale, vec3_exponent
 from .const import HAND_VELOCITY_TIMEFRAME, PHYSICS_EPSILON
 
 class VRItemComponent(Element):
@@ -48,7 +48,7 @@ class VRItemPoint(Element):
                 hand.interacting = None
                 self.parent.primary_grip = None
                 self.interacting = None
-                self.parent.velocity = glm.vec3(hand.velocity(HAND_VELOCITY_TIMEFRAME)) / self.parent.weight
+                self.parent.velocity = vec3_exponent(hand.velocity(HAND_VELOCITY_TIMEFRAME), 1.7) / self.parent.weight
 
                 # angular velocity must be adjusted for snap turn orientation
                 self.parent.angular_velocity = hand.angular_velocity(HAND_VELOCITY_TIMEFRAME)
@@ -261,9 +261,22 @@ class Knife(VRItem):
 
         self.scale = glm.vec3(0.25, 0.25, 0.25)
         self.bounce = 0.5
-        self.weight = 0.2
+        self.weight = 0.75
         self.floor_item = True
 
         self.add_point(VRItemPoint('grip', (0, -0.4, 0), default=True))
 
         self.simple_grab = 0.3
+
+class M4(VRItem):
+    def __init__(self, base_obj, pos=None):
+        super().__init__(base_obj, pos=pos)
+
+        self.scale = glm.vec3(0.23, 0.23, 0.23)
+        self.bounce = 0.25
+        self.weight = 1.25
+        self.floor_item = True
+
+        self.add_point(VRItemPoint('grip', (0, -0.26, 0.735), default=True))
+
+        self.simple_grab = 0.5

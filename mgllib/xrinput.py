@@ -74,7 +74,16 @@ class Controller(Element):
                 total_time += sample[4]
                 if total_time >= timeframe:
                     break
-            return quat_scale(self.aim_glm_quat * glm.inverse(sample[3]), 1 / total_time)
+
+            # https://stackoverflow.com/questions/2886606/flipping-issue-when-interpolating-rotations-using-quaternions
+            if glm.dot(self.aim_glm_quat, glm.inverse(sample[3])) >= 0:
+                q = quat_scale(self.aim_glm_quat * glm.inverse(sample[3]), 1 / total_time)
+            else:
+                q = quat_scale((-self.aim_glm_quat) * glm.inverse(sample[3]), 1 / total_time)
+            
+            # experimentally, if w is negative, the quaternion flipped backwards still. taking the absolute of w fixes this, but it's cursed.
+            q.w = abs(q.w)
+            return q
         return glm.vec3(0.0, 0.0, 0.0)
 
     def copy_to(self, controller):

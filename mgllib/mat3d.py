@@ -84,9 +84,22 @@ def unflatten_matrix(matrix):
     
 def quat_scale(quat, amount):
     no_rot = glm.quat(1.0, 0.0, 0.0, 0.0)
+    if amount <= 1:
+        if glm.dot(no_rot, quat) >= 0:
+            glm.mix(no_rot, quat, amount)
+        else:
+            glm.mix(-no_rot, quat, amount)
+
     amount = max(0, min(1, amount * 0.5))
     quat_2x = quat * quat
     return glm.mix(no_rot, quat_2x, amount)
+
+def vec3_exponent(vec, exp):
+    vec = glm.vec3(vec)
+    for i in range(3):
+        sign = vec[i] / abs(vec[i])
+        vec[i] = sign * (abs(vec[i]) ** exp)
+    return vec
 
 # https://math.stackexchange.com/questions/237369/given-this-transformation-matrix-how-do-i-decompose-it-into-translation-rotati
 def extract_rotation(mat3):
