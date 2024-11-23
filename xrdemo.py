@@ -29,6 +29,7 @@ class Demo(ElementSingleton):
         self.mgl = MGL()
 
         self.main_shader = self.mgl.program('data/shaders/default.vert', 'data/shaders/default.frag')
+        self.tracer_shader = self.mgl.program('data/shaders/default.vert', 'data/shaders/tracer.frag')
 
         self.hand_obj = OBJ('data/models/hand/hand.obj', self.main_shader, centered=True)
 
@@ -38,9 +39,13 @@ class Demo(ElementSingleton):
 
         self.knife_res = OBJ('data/models/knife/knife.obj', self.main_shader, centered=False)
         self.m4_res = OBJ('data/models/m4/m4.obj', self.main_shader, centered=False)
+
+        self.tracer_res = OBJ('data/models/tracer/tracer.obj', self.tracer_shader, centered=False, simple=True)
         
         self.items = [Knife(self.knife_res, (0, 1, i - 5)) for i in range(10)]
         self.items.append(M4(self.m4_res, (7, 1, 0)))
+
+        self.tracers = []
 
         for x in range(32):
             for z in range(32):
@@ -87,6 +92,11 @@ class Demo(ElementSingleton):
                 item.handle_interactions(hand)
             item.update()
 
+        for tracer in list(self.tracers):
+            kill = tracer.update()
+            if kill:
+                self.tracers.remove(tracer)
+
     def update(self, view_index):
         if view_index == 0:
             self.single_update()
@@ -97,6 +107,9 @@ class Demo(ElementSingleton):
 
         for item in self.items:
             item.render(self.e['XRCamera'])
+
+        for tracer in self.tracers:
+            tracer.render(self.e['XRCamera'])
 
         for i, hand in enumerate(self.player.hands):
             self.hand_entity.transform.quaternion = glm.quat(hand.aim_rot[3], *(hand.aim_rot[:3])) * glm.quat(glm.rotate(math.pi / 2, glm.vec3(0, 1, 0)))

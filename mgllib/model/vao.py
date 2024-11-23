@@ -27,8 +27,10 @@ class VAOs:
             vao.render(mode=mode)
 
 class TexturedVAOs(VAOs):
-    def __init__(self, program, vaos):
+    def __init__(self, program, vaos, simple=False):
         super().__init__(program, vaos)
+
+        self.simple = simple
 
         self.textures = {}
         self.texture_flags = 1
@@ -46,5 +48,6 @@ class TexturedVAOs(VAOs):
             else:
                 category = category + '_tex'
             uniforms[category] = tex
-        uniforms['texture_flags'] = self.texture_flags
+        if not self.simple:
+            uniforms['texture_flags'] = self.texture_flags
         super().render(uniforms=uniforms, mode=mode)

@@ -32,12 +32,13 @@ class VertexFormat:
         self.length = offset
 
 class OBJ(Element):
-    def __init__(self, path, program, centered=True, pixelated=True):
+    def __init__(self, path, program, centered=True, pixelated=True, simple=False):
         super().__init__()
 
         self.vao = None
         self.bounds = None
-
+        
+        self.simple = simple
         self.pixelated = pixelated
         
         self.load(path, program, centered=centered)
@@ -75,7 +76,7 @@ class OBJ(Element):
         else:
             geometry.get_bounds()
         if fmt:
-            self.vao = TexturedVAOs(program, geometry.build(self.e['MGL'].ctx, program, fmt))
+            self.vao = TexturedVAOs(program, geometry.build(self.e['MGL'].ctx, program, fmt), simple=self.simple)
             
             base_path = '/'.join(path.split('/')[:-1])
             folder_contents = os.listdir(base_path)

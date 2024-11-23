@@ -7,6 +7,8 @@ from .elements import Element
 from .mat3d import prep_mat, quat_scale, vec3_exponent
 from .const import HAND_VELOCITY_TIMEFRAME, PHYSICS_EPSILON
 
+from .tracer import Tracer
+
 class VRItemComponent(Element):
     def __init__(self):
         super().__init__()
@@ -109,6 +111,8 @@ class VRItem(Element):
         # these indicate where the item is currently being held from
         self.primary_grip = None
         self.alt_grip = None
+
+        self.holding_rotation = glm.quat()
 
         self.pos = glm.vec3(pos) if pos else glm.vec3(0.0, 0.0, 0.0)
 
@@ -254,6 +258,8 @@ class VRItem(Element):
                 rotation = self.primary_grip.input_rotation
                 translation = glm.translate(self.primary_grip.input_pos)
                 self.transform = translation * glm.mat4(rotation) * scale_mat * glm.translate(inverse_pivot)
+
+                self.holding_rotation = rotation
             else:
                 # take up vector from primary grip to handle the roll of the aim
                 up = glm.mat4(self.primary_grip.input_rotation) * glm.vec3(0, 1, 0)
@@ -267,6 +273,8 @@ class VRItem(Element):
                 # generate transform
                 translation = glm.translate(self.primary_grip.input_pos)
                 self.transform = translation * rotation * local_rotation * scale_mat * glm.translate(inverse_pivot)
+
+                self.holding_rotation = glm.quat(rotation * local_rotation)
         else:
             self.transform = glm.translate(self.pos) * glm.mat4(self.spin) * glm.mat4(self.rotation) * scale_mat
 
@@ -293,8 +301,22 @@ class VRItem(Element):
         uniforms['eye_pos'] = camera.eye_pos
         self.base_obj.vao.render(uniforms=uniforms)
 
-# item points are pre-scaling
-# op order is pivot -> scale -> rotate (either copy src or aim at alt) -> world translate
+class Gun(VRItem):
+    def __init__(self, base_obj, pos=None):
+        super().__init__(base_obj, pos=pos)
+
+        self.floor_item = True
+        self.simple_grab = 0.5
+        self.bounce = 0.25
+
+        self.rpm = 600
+
+    def fire(self):
+        if 'muzzle' in self.points:
+            muzzle_pos = self.points['muzzle'][0].world_pos
+            angle = self.holding_rotation
+
+            self.e['Demo'].tracers.append(Tracer(self.e['Demo'].tracer_res, muzzle_pos, angle))
 
 class Knife(VRItem):
     def __init__(self, base_obj, pos=None):
@@ -309,17 +331,30 @@ class Knife(VRItem):
 
         self.simple_grab = 0.3
 
-class M4(VRItem):
+class M4(Gun):
     def __init__(self, base_obj, pos=None):
         super().__init__(base_obj, pos=pos)
 
         self.scale = glm.vec3(0.23, 0.23, 0.23)
-        self.bounce = 0.25
         self.weight = 1.25
-        self.floor_item = True
+
+        self.rpm = 800
+        self.cooldown = 0
 
         self.add_point(VRItemPoint('grip', (0, -0.26, 0.735), default=True))
 
         self.add_point(VRItemPoint('grip', (0, 0, -0.735)))
 
-        self.simple_grab = 0.5
+        self.add_point(VRItemPoint('muzzle', (0, 0.14, -2.3)))
+
+    def update(self):
+        super().update()
+
+        dt = self.e['XRWindow'].dt
+        residual_cooldown = max(0, dt - self.cooldown) if self.cooldown else 0
+        self.cooldown = max(0, self.cooldown - dt)
+
+        if self.primary_grip and self.primary_grip.interacting and self.primary_grip.interacting.trigger.holding:
+            if not self.cooldown:
+                self.fire()
+                self.cooldown = max(0, 1 / (self.rpm / 60) - residual_cooldown)
