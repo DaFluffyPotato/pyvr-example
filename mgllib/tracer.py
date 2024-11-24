@@ -3,6 +3,7 @@ import math
 import glm
 
 from .entity import Entity
+from .spark import Spark
 
 class Tracer(Entity):
     def __init__(self, base_obj, pos, rotation):
@@ -15,15 +16,28 @@ class Tracer(Entity):
         self.velocity = (glm.mat4(rotation) * glm.vec3(0.0, 0.0, -1.0)) * self.speed
 
         self.step_spacing = 0.1 # 10cm per physics check
-        self.range = 10 # 10m maximum range
+        self.range = 100 # 10m maximum range
         self.travel_distance = 0
+
+        self.create_sparks(4)
+
+    def create_sparks(self, count, backwards=False):
+        rotation = self.rotation
+        if backwards:
+            rotation = glm.quat(glm.mat4(self.rotation) * glm.rotate(math.pi, (0, 1, 0)))
+
+        for i in range(count):
+            self.e['Demo'].particles.append(Spark(self.e['Demo'].spark_res, self.pos, rotation, speed=5, spread=0.7, scale=(0.2, 0.05), decay=0.6, color=(1.0, 1.0, 1.0)))
 
     def physics_check(self):
         if self.e['World'].check_block(self.pos):
             return True
         
     def destroy(self, collision=False):
-        pass
+        if collision:
+            self.create_sparks(8, backwards=True)
+        else:
+            self.create_sparks(4)
     
     def update(self):
         current_speed = glm.length(self.velocity)

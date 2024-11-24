@@ -1,3 +1,5 @@
+import math
+
 import glm
 
 from .model.entity3d import Entity3D
@@ -5,7 +7,7 @@ from .shapes.cuboid import CornerCuboid
 from .shapes.sphere import sphere_collide
 from .elements import Element
 from .mat3d import prep_mat, quat_scale, vec3_exponent
-from .const import HAND_VELOCITY_TIMEFRAME, PHYSICS_EPSILON
+from .const import HAND_VELOCITY_TIMEFRAME, PHYSICS_EPSILON, RECOIL_PATTERNS
 
 from .tracer import Tracer
 
@@ -115,6 +117,8 @@ class VRItem(Element):
         self.holding_rotation = glm.quat()
 
         self.pos = glm.vec3(pos) if pos else glm.vec3(0.0, 0.0, 0.0)
+
+        self.recoil = glm.vec2(0.5, 0.0)
 
         self.velocity_reset()
         self.gravity = 9.81 # m/s^2
@@ -254,12 +258,13 @@ class VRItem(Element):
         scale_mat = glm.scale(self.scale)
         if self.primary_grip:
             inverse_pivot = self.primary_grip.pos * -1
+            recoil_rotation = glm.rotate(self.recoil.x, glm.vec3(0, 1, 0)) * glm.rotate(self.recoil.y, glm.vec3(1, 0, 0))
             if not self.alt_grip:
                 rotation = self.primary_grip.input_rotation
                 translation = glm.translate(self.primary_grip.input_pos)
-                self.transform = translation * glm.mat4(rotation) * scale_mat * glm.translate(inverse_pivot)
+                self.transform = translation * glm.mat4(rotation) * recoil_rotation * scale_mat * glm.translate(inverse_pivot)
 
-                self.holding_rotation = rotation
+                self.holding_rotation = rotation * glm.quat(recoil_rotation)
             else:
                 # take up vector from primary grip to handle the roll of the aim
                 up = glm.mat4(self.primary_grip.input_rotation) * glm.vec3(0, 1, 0)
@@ -272,9 +277,9 @@ class VRItem(Element):
                 rotation = glm.inverse(glm.lookAt(glm.vec3(0.0, 0.0, 0.0), target, up))
                 # generate transform
                 translation = glm.translate(self.primary_grip.input_pos)
-                self.transform = translation * rotation * local_rotation * scale_mat * glm.translate(inverse_pivot)
+                self.transform = translation * rotation * recoil_rotation * local_rotation * scale_mat * glm.translate(inverse_pivot)
 
-                self.holding_rotation = glm.quat(rotation * local_rotation)
+                self.holding_rotation = glm.quat(rotation * recoil_rotation * local_rotation)
         else:
             self.transform = glm.translate(self.pos) * glm.mat4(self.spin) * glm.mat4(self.rotation) * scale_mat
 
@@ -310,6 +315,15 @@ class Gun(VRItem):
         self.bounce = 0.25
 
         self.rpm = 600
+        self.cooldown = 0
+
+        self.recoil_scale = glm.vec2(0.65, 1.25)
+        self.recoil_pattern = 'default'
+        self.recoil_velocity = glm.vec2(0.0, 0.0)
+        self.recoil_decay = 30
+        self.spray_control_force = 0
+        self.spray_control_force_scale = 6
+        self.spray_index = 0
 
     def fire(self):
         if 'muzzle' in self.points:
@@ -317,6 +331,57 @@ class Gun(VRItem):
             angle = self.holding_rotation
 
             self.e['Demo'].tracers.append(Tracer(self.e['Demo'].tracer_res, muzzle_pos, angle))
+
+            pattern = RECOIL_PATTERNS[self.recoil_pattern]
+            if len(pattern['start']) <= self.spray_index:
+                recoil = pattern['loop'][self.spray_index % len(pattern['loop'])]
+            else:
+                recoil = pattern['start'][self.spray_index]
+            self.recoil_velocity += glm.vec2(recoil)
+            self.spray_control_force = 0
+            self.spray_index += 1
+
+    def handle_recoil(self):
+        dt = self.e['XRWindow'].dt
+
+        recoil_modifier = 0.4 if self.primary_grip and self.alt_grip else 1.0
+
+        self.recoil += self.recoil_velocity * dt * self.recoil_scale * recoil_modifier
+        self.recoil.y = min(self.recoil.y, math.pi / 3 * recoil_modifier)
+        vel_recovery_amount = self.recoil_decay * dt
+        if vel_recovery_amount > glm.length(self.recoil_velocity):
+            self.recoil_velocity = glm.vec2(0.0, 0.0)
+        else:
+            vel_recovery_angle = math.atan2(-self.recoil_velocity.y, -self.recoil_velocity.x)
+            self.recoil_velocity.x += math.cos(vel_recovery_angle) * vel_recovery_amount
+            self.recoil_velocity.y += math.sin(vel_recovery_angle) * vel_recovery_amount
+        
+        if self.spray_control_force:
+            rec_recovery_amount = self.spray_control_force * dt
+            if rec_recovery_amount > glm.length(self.recoil):
+                self.recoil = glm.vec2(0.0, 0.0)
+                if not glm.length(self.recoil_velocity):
+                    self.spray_index = 0
+            else:
+                rec_recovery_angle = math.atan2(-self.recoil.y, -self.recoil.x)
+                self.recoil.x += math.cos(rec_recovery_angle) * rec_recovery_amount
+                self.recoil.y += math.sin(rec_recovery_angle) * rec_recovery_amount
+            
+        self.spray_control_force += dt * self.spray_control_force_scale
+
+    def update(self):
+        super().update()
+
+        dt = self.e['XRWindow'].dt
+        residual_cooldown = max(0, dt - self.cooldown) if self.cooldown else 0
+        self.cooldown = max(0, self.cooldown - dt)
+
+        self.handle_recoil()
+
+        if self.primary_grip and self.primary_grip.interacting and self.primary_grip.interacting.trigger.holding and (self.primary_grip == self.default_grip):
+            if not self.cooldown:
+                self.fire()
+                self.cooldown = max(0, 1 / (self.rpm / 60) - residual_cooldown)
 
 class Knife(VRItem):
     def __init__(self, base_obj, pos=None):
@@ -339,22 +404,12 @@ class M4(Gun):
         self.weight = 1.25
 
         self.rpm = 800
-        self.cooldown = 0
 
         self.add_point(VRItemPoint('grip', (0, -0.26, 0.735), default=True))
 
         self.add_point(VRItemPoint('grip', (0, 0, -0.735)))
 
-        self.add_point(VRItemPoint('muzzle', (0, 0.14, -2.3)))
+        self.add_point(VRItemPoint('muzzle', (0, 0.18, -2.6)))
 
     def update(self):
         super().update()
-
-        dt = self.e['XRWindow'].dt
-        residual_cooldown = max(0, dt - self.cooldown) if self.cooldown else 0
-        self.cooldown = max(0, self.cooldown - dt)
-
-        if self.primary_grip and self.primary_grip.interacting and self.primary_grip.interacting.trigger.holding:
-            if not self.cooldown:
-                self.fire()
-                self.cooldown = max(0, 1 / (self.rpm / 60) - residual_cooldown)

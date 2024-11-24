@@ -16,6 +16,7 @@ from mgllib.player_body import PlayerBody
 from mgllib.world.world import World
 from mgllib.skybox import Skybox
 from mgllib.vritem import Knife, M4
+from mgllib.model.polygon import Polygon, TETRAHEDRON
 
 class Demo(ElementSingleton):
     def __init__(self):
@@ -41,11 +42,15 @@ class Demo(ElementSingleton):
         self.m4_res = OBJ('data/models/m4/m4.obj', self.main_shader, centered=False)
 
         self.tracer_res = OBJ('data/models/tracer/tracer.obj', self.tracer_shader, centered=False, simple=True)
+
+        self.spark_res = Polygon(TETRAHEDRON, self.mgl.program('data/shaders/polygon.vert', 'data/shaders/polygon.frag'))
         
         self.items = [Knife(self.knife_res, (0, 1, i - 5)) for i in range(10)]
-        self.items.append(M4(self.m4_res, (7, 1, 0)))
+        for i in range(3):
+            self.items.append(M4(self.m4_res, (7, 1, i - 1)))
 
         self.tracers = []
+        self.particles = []
 
         for x in range(32):
             for z in range(32):
@@ -97,6 +102,11 @@ class Demo(ElementSingleton):
             if kill:
                 self.tracers.remove(tracer)
 
+        for particle in list(self.particles):
+            kill = particle.update()
+            if kill:
+                self.particles.remove(particle)
+
     def update(self, view_index):
         if view_index == 0:
             self.single_update()
@@ -110,6 +120,9 @@ class Demo(ElementSingleton):
 
         for tracer in self.tracers:
             tracer.render(self.e['XRCamera'])
+        
+        for particle in self.particles:
+            particle.render(self.e['XRCamera'])
 
         for i, hand in enumerate(self.player.hands):
             self.hand_entity.transform.quaternion = glm.quat(hand.aim_rot[3], *(hand.aim_rot[:3])) * glm.quat(glm.rotate(math.pi / 2, glm.vec3(0, 1, 0)))
