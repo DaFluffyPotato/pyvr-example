@@ -17,6 +17,7 @@ from mgllib.world.world import World
 from mgllib.skybox import Skybox
 from mgllib.vritem import Knife, M4
 from mgllib.model.polygon import Polygon, TETRAHEDRON
+from mgllib.npc import NPC
 
 class Demo(ElementSingleton):
     def __init__(self):
@@ -34,6 +35,10 @@ class Demo(ElementSingleton):
 
         self.hand_obj = OBJ('data/models/hand/hand.obj', self.main_shader, centered=True)
 
+        self.helmet_res = OBJ('data/models/helmet/helmet.obj', self.main_shader)
+        self.head_res = OBJ('data/models/head/head.obj', self.main_shader)
+        self.body_res = OBJ('data/models/body/body.obj', self.main_shader)
+
         self.world = World(self.main_shader)
 
         self.skybox = Skybox('data/textures/skybox', self.mgl.program('data/shaders/skybox.vert', 'data/shaders/skybox.frag'))
@@ -48,6 +53,8 @@ class Demo(ElementSingleton):
         self.items = [Knife(self.knife_res, (0, 1, i - 5)) for i in range(10)]
         for i in range(3):
             self.items.append(M4(self.m4_res, (7, 1, i - 1)))
+
+        self.npcs = [NPC((5, 10, 3))]
 
         self.tracers = []
         self.particles = []
@@ -107,6 +114,11 @@ class Demo(ElementSingleton):
             if kill:
                 self.particles.remove(particle)
 
+        for npc in list(self.npcs):
+            kill = npc.update()
+            if kill:
+                self.npcs.remove(npc)
+
     def update(self, view_index):
         if view_index == 0:
             self.single_update()
@@ -123,6 +135,9 @@ class Demo(ElementSingleton):
         
         for particle in self.particles:
             particle.render(self.e['XRCamera'])
+
+        for npc in self.npcs:
+            npc.render(self.e['XRCamera'])
 
         for i, hand in enumerate(self.player.hands):
             self.hand_entity.transform.quaternion = glm.quat(hand.aim_rot[3], *(hand.aim_rot[:3])) * glm.quat(glm.rotate(math.pi / 2, glm.vec3(0, 1, 0)))

@@ -1,4 +1,5 @@
 import math
+import random
 
 import glm
 
@@ -21,6 +22,12 @@ class Tracer(Entity):
 
         self.create_sparks(4)
 
+    def create_blood(self, count):
+        rotation = glm.quat(glm.mat4(self.rotation) * glm.rotate(math.pi, (0, 1, 0)))
+
+        for i in range(count):
+            self.e['Demo'].particles.append(Spark(self.e['Demo'].spark_res, self.pos, rotation, speed=random.random() + 1, spread=1.1, scale=(0.2, 0.16), decay=0.4 + random.random() * 0.2, color=(1.0, 0.0, 0.267)))
+
     def create_sparks(self, count, backwards=False):
         rotation = self.rotation
         if backwards:
@@ -30,6 +37,11 @@ class Tracer(Entity):
             self.e['Demo'].particles.append(Spark(self.e['Demo'].spark_res, self.pos, rotation, speed=5, spread=0.7, scale=(0.2, 0.05), decay=0.6, color=(1.0, 1.0, 1.0)))
 
     def physics_check(self):
+        for npc in self.e['Demo'].npcs:
+            if npc.hit_check(self.pos):
+                self.create_blood(6)
+                return True
+            
         if self.e['World'].check_block(self.pos):
             return True
         
@@ -47,6 +59,7 @@ class Tracer(Entity):
             step_amount = (self.e['XRWindow'].dt * (1 / movement_steps))
             self.travel_distance += current_speed * step_amount
             self.pos += self.velocity * step_amount
+
             if self.physics_check():
                 self.destroy(collision=True)
                 return True
