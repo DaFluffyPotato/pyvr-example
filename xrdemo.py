@@ -1,6 +1,7 @@
 import sys
 import time
 import math
+import random
 
 import pygame
 from OpenGL import GL
@@ -54,7 +55,9 @@ class Demo(ElementSingleton):
         for i in range(3):
             self.items.append(M4(self.m4_res, (7, 1, i - 1)))
 
-        self.npcs = [NPC((5, 10, 3))]
+        self.npcs = []
+        for i in range(10):
+            self.npcs.append(NPC((random.randint(-10, 10), 10, random.randint(-10, 10))))
 
         self.tracers = []
         self.particles = []

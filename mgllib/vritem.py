@@ -310,6 +310,8 @@ class Gun(VRItem):
     def __init__(self, base_obj, pos=None):
         super().__init__(base_obj, pos=pos)
 
+        self.type = 'm4'
+
         self.floor_item = True
         self.simple_grab = 0.5
         self.bounce = 0.25
@@ -330,7 +332,7 @@ class Gun(VRItem):
             muzzle_pos = self.points['muzzle'][0].world_pos
             angle = self.holding_rotation
 
-            self.e['Demo'].tracers.append(Tracer(self.e['Demo'].tracer_res, muzzle_pos, angle))
+            self.e['Demo'].tracers.append(Tracer(self.e['Demo'].tracer_res, self.type, muzzle_pos, angle))
 
             pattern = RECOIL_PATTERNS[self.recoil_pattern]
             if len(pattern['start']) <= self.spray_index:

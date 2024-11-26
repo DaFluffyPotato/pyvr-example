@@ -6,6 +6,7 @@ from .world.const import BLOCK_SCALE
 from .shapes.cuboid import FloorCuboid, CornerCuboid, NO_COLLISIONS
 from .shapes.sphere import Sphere
 from .shapes.cylinder import FloorCylinder
+from .const import BULLET_STATS
 
 class NPCPart(Element):
     def __init__(self, parent, model, part_type):
@@ -37,6 +38,12 @@ class NPC(Element):
         self.pos = glm.vec3(pos) if pos else glm.vec3(0.0, 0.0, 0.0)
         self.rotation = glm.quat()
 
+        self.killed = False
+        self.helmeted = True
+        self.max_health = 100
+        self.health = self.max_health
+        self.helmet_health = 1.0
+
         self.head = NPCPart(self, self.e['Demo'].head_res, 'head')
         self.helmet = NPCPart(self, self.e['Demo'].helmet_res, 'helmet')
         self.body = NPCPart(self, self.e['Demo'].body_res, 'body')
@@ -54,9 +61,29 @@ class NPC(Element):
 
     def hit_check(self, point):
         if self.head.hitbox.collidepoint(point):
-            return 'body'
+            return 'head'
         if self.body.hitbox.collidepoint(point):
             return 'body'
+        
+    def kill(self):
+        if not self.killed:
+            self.killed = True
+        
+    def damage(self, bullet_type, part):
+        stats = BULLET_STATS[bullet_type]
+        if part == 'head':
+            if self.helmeted:
+                self.helmet_health -= stats['helmet_dmg']
+                if self.helmet_health <= 0:
+                    self.helmeted = False
+                self.health -= (self.health * 0.7 + self.max_health * 0.3) * stats['helmet_pen']
+            else:
+                self.health = 0
+        else:
+            self.health -= stats['damage']
+        
+        if self.health <= 0:
+            self.kill()
     
     def move(self, movement):
         blockers = [CornerCuboid(block.scaled_world_pos, (block.scale, block.scale, block.scale)) for block in self.e['World'].nearby_blocks(self.cuboid.origin, radii=(1, 3, 1))]
@@ -82,9 +109,13 @@ class NPC(Element):
 
         self.calculate_transform()
 
+        return self.killed
+
     @property
     def parts(self):
-        return [self.head, self.helmet, self.body]
+        if self.helmeted:
+            return [self.head, self.helmet, self.body]
+        return [self.head, self.body]
 
     def calculate_transform(self):
         scale_mat = glm.scale(self.scale)

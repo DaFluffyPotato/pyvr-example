@@ -7,8 +7,10 @@ from .entity import Entity
 from .spark import Spark
 
 class Tracer(Entity):
-    def __init__(self, base_obj, pos, rotation):
+    def __init__(self, base_obj, bullet_type, pos, rotation):
         super().__init__(base_obj, pos=pos, rotation=rotation)
+
+        self.type = bullet_type
 
         self.scale.x *= 0.2
         self.scale.y *= 0.2
@@ -38,7 +40,9 @@ class Tracer(Entity):
 
     def physics_check(self):
         for npc in self.e['Demo'].npcs:
-            if npc.hit_check(self.pos):
+            hit = npc.hit_check(self.pos)
+            if hit:
+                npc.damage(self.type, hit)
                 self.create_blood(6)
                 return True
             

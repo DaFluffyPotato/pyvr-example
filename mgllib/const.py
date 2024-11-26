@@ -34,3 +34,11 @@ RECOIL_PATTERNS = {
         ],
     }
 }
+
+BULLET_STATS = {
+    'm4': {
+        'helmet_pen': 0.75,
+        'helmet_dmg': 1,
+        'damage': 20,
+    }
+}
