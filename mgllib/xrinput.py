@@ -149,6 +149,7 @@ class XRInput(ElementSingleton):
         self.suggested_bindings = None
 
         self.raw_head_pos = (0, 0, 0)
+        self.raw_head_orientation = glm.quat()
         self.head_transform = glm.translate(glm.vec3((0, 0, 0)))
 
         controller_paths = (xr.Path * 2)(xr.string_to_path(context.instance, '/user/hand/left'), xr.string_to_path(context.instance, '/user/hand/right'))
@@ -378,6 +379,7 @@ class XRInput(ElementSingleton):
             if self.raw_head_pos:
                 self.head_movement = tuple(new_raw_head_pos[i] - self.raw_head_pos[i] for i in range(3))
             self.raw_head_pos = new_raw_head_pos
+            self.raw_head_orientation = glm.quat(space_location.pose.orientation[3], space_location.pose.orientation[:3])
 
             # hack to remove y component from head transform (since free vertical head movement is allowed while x/z needs to apply to movement)
             head_transform_vec = self.raw_head_pos

@@ -73,10 +73,12 @@ class NPC(Element):
     def body_fragment(self, source):
         rotation = glm.quat(glm.rotate(random.random() * math.pi * 2, (1, 0, 0)) * glm.rotate(random.random() * math.pi * 2, (0, 1, 0)) * glm.rotate(random.random() * math.pi * 2, (0, 0, 1)))
         colors = [(1.0, 0.0, 0.267), (0.635, 0.149, 0.2), (0.149, 0.169, 0.267)]
-        self.e['Demo'].particles.append(Spark(self.e['Demo'].spark_res, source, rotation, speed=1.5 + random.random() * 3, spread=0, scale=(0.15 + random.random() * 0.8, 0.15 + random.random() * 0.16), decay=0.35 + random.random() * 0.25, color=random.choice(colors), accel=glm.vec3(0, -self.gravity * (0.5 + random.random() * 0.5), 0), drag=3))
+        self.e['Demo'].particles.append(Spark(self.e['Demo'].spark_res, source, rotation, speed=1.5 + random.random() * 3, spread=0, scale=(0.15 + random.random() * 0.08, 0.15 + random.random() * 0.16), decay=0.35 + random.random() * 0.25, color=random.choice(colors), accel=glm.vec3(0, -self.gravity * (0.5 + random.random() * 0.5), 0), drag=3))
         
     def kill(self):
         if not self.killed:
+            self.e['Sounds'].play('kill_confirmed', volume=0.5)
+
             for i in range(30):
                 self.body_fragment(self.body.hitbox.random_point())
             for i in range(14):
@@ -85,16 +87,20 @@ class NPC(Element):
         
     def damage(self, bullet_type, part):
         stats = BULLET_STATS[bullet_type]
+
         if part == 'head':
             if self.helmeted:
                 self.helmet_health -= stats['helmet_dmg']
                 if self.helmet_health <= 0:
                     self.helmeted = False
                 self.health -= (self.health * 0.7 + self.max_health * 0.3) * stats['helmet_pen']
+                self.e['Sounds'].play('helmet', volume=0.7)
             else:
                 self.health = 0
+                self.e['Sounds'].play('headshot')
         else:
             self.health -= stats['damage']
+            self.e['Sounds'].play('hurt')
         
         if self.health <= 0:
             self.kill()

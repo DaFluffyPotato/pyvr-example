@@ -47,6 +47,7 @@ class Tracer(Entity):
                 return True
             
         if self.e['World'].check_block(self.pos):
+            self.e['Sounds'].play_from('bullet_collide', position=self.pos)
             return True
         
     def destroy(self, collision=False):

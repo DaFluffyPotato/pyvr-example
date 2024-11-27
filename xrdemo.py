@@ -19,6 +19,7 @@ from mgllib.skybox import Skybox
 from mgllib.vritem import Knife, M4
 from mgllib.model.polygon import Polygon, TETRAHEDRON
 from mgllib.npc import NPC
+from mgllib.sound import Sounds
 
 class Demo(ElementSingleton):
     def __init__(self):
@@ -30,6 +31,8 @@ class Demo(ElementSingleton):
 
     def init_mgl(self):
         self.mgl = MGL()
+
+        self.sounds = Sounds('data/sfx')
 
         self.main_shader = self.mgl.program('data/shaders/default.vert', 'data/shaders/default.frag')
         self.npc_shader = self.mgl.program('data/shaders/npc.vert', 'data/shaders/npc.frag')

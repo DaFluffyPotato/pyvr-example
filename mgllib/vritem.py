@@ -57,6 +57,8 @@ class VRItemPoint(Element):
                 else:
                     # primary is taken and this isn't the default, so make self the alt grip
                     self.parent.alt_grip = self
+
+                self.parent.e['Sounds'].play_from('grab', position=self.world_pos, volume=0.7)
     
     def update(self, hand):
         if hand.interacting == self:
@@ -90,6 +92,8 @@ class VRItemPoint(Element):
                     self.parent.alt_grip = None
 
                 self.interacting = None
+
+                self.parent.e['Sounds'].play_from('release', position=self.world_pos, volume=0.45)
 
 class VRItem(Element):
     def __init__(self, base_obj, pos=None):
@@ -331,6 +335,8 @@ class Gun(VRItem):
         if 'muzzle' in self.points:
             muzzle_pos = self.points['muzzle'][0].world_pos
             angle = self.holding_rotation
+
+            self.e['Sounds'].play_from('shoot', volume=1.0, position=muzzle_pos)
 
             self.e['Demo'].tracers.append(Tracer(self.e['Demo'].tracer_res, self.type, muzzle_pos, angle))
 

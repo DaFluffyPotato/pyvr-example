@@ -127,3 +127,5 @@ class PlayerBody(ElementSingleton):
 
         self.e['XRCamera'].world_rotation = list(self.world_pos.rotation)
         self.e['XRCamera'].world_matrix = np.linalg.inv(self.world_pos.npmatrix)
+
+        self.e['Sounds'].place_listener(glm.vec3(self.world_pos.pos) + glm.vec3(0, self.e['XRInput'].raw_head_pos[1], 0), self.world_pos.rotation_matrix * glm.mat4(self.e['XRInput'].raw_head_orientation))
