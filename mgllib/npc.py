@@ -1,3 +1,6 @@
+import math
+import random
+
 import glm
 
 from .elements import Element
@@ -7,6 +10,7 @@ from .shapes.cuboid import FloorCuboid, CornerCuboid, NO_COLLISIONS
 from .shapes.sphere import Sphere
 from .shapes.cylinder import FloorCylinder
 from .const import BULLET_STATS
+from .spark import Spark
 
 class NPCPart(Element):
     def __init__(self, parent, model, part_type):
@@ -36,9 +40,9 @@ class NPC(Element):
 
         self.scale = glm.vec3(1.0, 1.0, 1.0)
         self.pos = glm.vec3(pos) if pos else glm.vec3(0.0, 0.0, 0.0)
-        self.rotation = glm.quat()
+        self.rotation = glm.quat(glm.rotate(random.random() * math.pi * 2, (0, 1, 0)))
 
-        self.killed = False
+        self.killed = 0
         self.helmeted = True
         self.max_health = 100
         self.health = self.max_health
@@ -60,14 +64,24 @@ class NPC(Element):
         self.terminal_velocity = 19
 
     def hit_check(self, point):
-        if self.head.hitbox.collidepoint(point):
-            return 'head'
-        if self.body.hitbox.collidepoint(point):
-            return 'body'
+        if not self.killed:
+            if self.head.hitbox.collidepoint(point):
+                return 'head'
+            if self.body.hitbox.collidepoint(point):
+                return 'body'
+            
+    def body_fragment(self, source):
+        rotation = glm.quat(glm.rotate(random.random() * math.pi * 2, (1, 0, 0)) * glm.rotate(random.random() * math.pi * 2, (0, 1, 0)) * glm.rotate(random.random() * math.pi * 2, (0, 0, 1)))
+        colors = [(1.0, 0.0, 0.267), (0.635, 0.149, 0.2), (0.149, 0.169, 0.267)]
+        self.e['Demo'].particles.append(Spark(self.e['Demo'].spark_res, source, rotation, speed=1.5 + random.random() * 3, spread=0, scale=(0.15 + random.random() * 0.8, 0.15 + random.random() * 0.16), decay=0.35 + random.random() * 0.25, color=random.choice(colors), accel=glm.vec3(0, -self.gravity * (0.5 + random.random() * 0.5), 0), drag=3))
         
     def kill(self):
         if not self.killed:
-            self.killed = True
+            for i in range(30):
+                self.body_fragment(self.body.hitbox.random_point())
+            for i in range(14):
+                self.body_fragment(self.head.hitbox.random_point())
+            self.killed = 0.1
         
     def damage(self, bullet_type, part):
         stats = BULLET_STATS[bullet_type]
@@ -91,29 +105,33 @@ class NPC(Element):
         self.pos = list(self.cuboid.origin)
 
     def update(self):
-        movement_vec = glm.vec3(0, 0, 0)
+        if not self.killed:
+            movement_vec = glm.vec3(0, 0, 0)
 
-        self.velocity.y = max(-self.terminal_velocity, self.velocity.y - self.gravity * self.e['XRWindow'].dt)
+            self.velocity.y = max(-self.terminal_velocity, self.velocity.y - self.gravity * self.e['XRWindow'].dt)
 
-        movement_vec.x += self.velocity.x * self.e['XRWindow'].dt
-        movement_vec.y += self.velocity.y * self.e['XRWindow'].dt
-        movement_vec.z += self.velocity.z * self.e['XRWindow'].dt
+            movement_vec.x += self.velocity.x * self.e['XRWindow'].dt
+            movement_vec.y += self.velocity.y * self.e['XRWindow'].dt
+            movement_vec.z += self.velocity.z * self.e['XRWindow'].dt
 
-        self.move(list(movement_vec))
+            self.move(list(movement_vec))
 
-        if self.last_collisions['bottom']:
-            self.velocity.y = 0
+            if self.last_collisions['bottom']:
+                self.velocity.y = 0
 
-        if self.last_collisions['top']:
-            self.velocity.y = 0
+            if self.last_collisions['top']:
+                self.velocity.y = 0
 
         self.calculate_transform()
 
-        return self.killed
+        if self.killed:
+            self.killed = min(1, self.killed + self.e['XRWindow'].dt)
+
+        return self.killed >= 1.0
 
     @property
     def parts(self):
-        if self.helmeted:
+        if self.helmeted and (not self.killed):
             return [self.head, self.helmet, self.body]
         return [self.head, self.body]
 
@@ -128,6 +146,7 @@ class NPC(Element):
         uniforms['world_light_pos'] = tuple(camera.light_pos)
         uniforms['view_projection'] = camera.prepped_matrix
         uniforms['eye_pos'] = camera.eye_pos
+        uniforms['pop'] = self.killed
 
         for part in self.parts:
             uniforms['world_transform'] = prep_mat(self.transform * part.transform)

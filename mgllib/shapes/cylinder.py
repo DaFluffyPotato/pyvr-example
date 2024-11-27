@@ -1,3 +1,6 @@
+import math
+import random
+
 import glm
 
 class FloorCylinder:
@@ -14,3 +17,8 @@ class FloorCylinder:
             if glm.length(self.xz_pos - glm.vec2(point.x, point.z)) <= self.radius:
                 return True
         return False
+    
+    def random_point(self):
+        radius = random.random() * self.radius
+        angle = random.random() * math.pi * 2
+        return glm.vec3(math.cos(angle) * radius + self.pos.x, self.pos.y + random.random() * self.height, math.sin(angle) * radius + self.pos.z)

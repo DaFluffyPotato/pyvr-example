@@ -32,13 +32,14 @@ class Demo(ElementSingleton):
         self.mgl = MGL()
 
         self.main_shader = self.mgl.program('data/shaders/default.vert', 'data/shaders/default.frag')
+        self.npc_shader = self.mgl.program('data/shaders/npc.vert', 'data/shaders/npc.frag')
         self.tracer_shader = self.mgl.program('data/shaders/default.vert', 'data/shaders/tracer.frag')
 
         self.hand_obj = OBJ('data/models/hand/hand.obj', self.main_shader, centered=True)
 
         self.helmet_res = OBJ('data/models/helmet/helmet.obj', self.main_shader)
-        self.head_res = OBJ('data/models/head/head.obj', self.main_shader)
-        self.body_res = OBJ('data/models/body/body.obj', self.main_shader)
+        self.head_res = OBJ('data/models/head/head.obj', self.npc_shader)
+        self.body_res = OBJ('data/models/body/body.obj', self.npc_shader)
 
         self.world = World(self.main_shader)
 
