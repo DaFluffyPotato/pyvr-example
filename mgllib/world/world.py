@@ -25,6 +25,14 @@ class World(ElementSingleton):
 
         self.reset_rebuild()
 
+    def add_decor(self, decor):
+        world_pos = decor.pos
+        chunk_id = tuple(int((world_pos[i] / BLOCK_SCALE) // CHUNK_SIZE) for i in range(3))
+        if chunk_id not in self.chunks:
+            self.chunks[chunk_id] = Chunk(self, chunk_id)
+        
+        self.chunks[chunk_id].add_decor(decor)
+
     def get_block(self, world_pos):
         chunk_id = tuple(int(world_pos[i] // CHUNK_SIZE) for i in range(3))
         if chunk_id in self.chunks:
@@ -67,6 +75,10 @@ class World(ElementSingleton):
 
         self.combine_missing()
 
-    def render(self, camera, uniforms={}):
+    def rebuild_decor(self):
         for chunk in self.chunks.values():
-            chunk.render(camera, uniforms=uniforms)
+            chunk.rebuild_decor()
+
+    def render(self, camera, uniforms={}, decor_uniforms={}):
+        for chunk in self.chunks.values():
+            chunk.render(camera, uniforms=uniforms, decor_uniforms=decor_uniforms)

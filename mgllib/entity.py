@@ -18,10 +18,16 @@ class Entity(Element):
     def calculate_transform(self):
         scale_mat = glm.scale(self.scale)
         self.transform = glm.translate(self.pos) * glm.mat4(self.rotation) * scale_mat
+        self.prepped_transform = prep_mat(self.transform)
 
     def render(self, camera, uniforms={}):
         uniforms['world_light_pos'] = tuple(camera.light_pos)
-        uniforms['world_transform'] = prep_mat(self.transform)
+        uniforms['world_transform'] = self.prepped_transform
         uniforms['view_projection'] = camera.prepped_matrix
         uniforms['eye_pos'] = camera.eye_pos
+        self.base_obj.vao.render(uniforms=uniforms)
+
+    # saves a little bit on performance (assumes camera-related uniforms are already set)
+    def fast_render(self, camera, uniforms):
+        uniforms['world_transform'] = self.prepped_transform
         self.base_obj.vao.render(uniforms=uniforms)

@@ -20,6 +20,7 @@ BLOCK_MAP = {
     'chiseled_stone': 0,
     'log': 1,
     'grass': 2,
+    'dirt': 3,
 }
 
 BLOCK_CACHE = {}

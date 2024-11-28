@@ -21,6 +21,11 @@ int bit_check(int value, int bit_i) {
 
 void main() {
   vec4 base_color = texture(tex, frag_uv);
+
+  if (base_color.a <= 0) {
+    discard;
+  }
+  
   float local_shininess = texture(metallic_tex, frag_uv).r * bit_check(texture_flags, 2);
   vec3 local_normal = ((texture(normal_tex, frag_uv).rgb * 2.0) - 1.0) * bit_check(texture_flags, 1);
 

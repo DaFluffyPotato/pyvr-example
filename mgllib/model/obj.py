@@ -32,14 +32,19 @@ class VertexFormat:
         self.length = offset
 
 class OBJ(Element):
-    def __init__(self, path, program, centered=True, pixelated=True, simple=False):
+    def __init__(self, path, program, centered=True, pixelated=True, simple=False, save_geometry=False, no_build=False):
         super().__init__()
 
         self.vao = None
         self.bounds = None
+        self.save_geometry = save_geometry
+        self.geometry = None
         
         self.simple = simple
         self.pixelated = pixelated
+        self.no_build = no_build
+
+        self.name = path.split('/')[-1].split('.')[0]
         
         self.load(path, program, centered=centered)
 
@@ -76,7 +81,10 @@ class OBJ(Element):
         else:
             geometry.get_bounds()
         if fmt:
-            self.vao = TexturedVAOs(program, geometry.build(self.e['MGL'].ctx, program, fmt), simple=self.simple)
+            if self.no_build:
+                self.vao = TexturedVAOs(program, [], simple=self.simple)
+            else:
+                self.vao = TexturedVAOs(program, geometry.build(self.e['MGL'].ctx, program, fmt), simple=self.simple)
             
             base_path = '/'.join(path.split('/')[:-1])
             folder_contents = os.listdir(base_path)
@@ -95,6 +103,9 @@ class OBJ(Element):
                             tex.filter = moderngl.NEAREST, moderngl.NEAREST
                         self.vao.bind_texture(tex, 'texture')
         self.bounds = geometry.bounds
+
+        if self.save_geometry:
+            self.geometry = geometry
 
     def new_entity(self):
         return Entity3D(self.vao)

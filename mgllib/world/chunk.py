@@ -4,6 +4,7 @@ from ..elements import Element
 from .block import ChunkBlock, CACHE, N7_OFFSETS
 from ..model.vao import TexturedVAOs
 from ..mat3d import Transform3D
+from .decor import DecorGroup
 from .const import CHUNK_SIZE, BLOCK_SCALE
 
 class Chunk(Element):
@@ -26,6 +27,15 @@ class Chunk(Element):
         self.buffer = None
 
         self.changes_since_rebuild = set()
+
+        self.decor = {}
+        self.decor_vaos = {}
+
+    def add_decor(self, decor):
+        group = decor.source.name
+        if group not in self.decor:
+            self.decor[group] = []
+        self.decor[group].append(decor)
 
     def release(self):
         if self.tvaos:
@@ -61,7 +71,16 @@ class Chunk(Element):
             self.buffer = None
             self.tvaos = None
 
-    # TODO: add change list param to limit rebuild
+    def rebuild_decor(self):
+        # free up old buffers
+        for group in self.decor_vaos.values():
+            group.release()
+
+        self.decor_vaos = {}
+        for group in self.decor:
+            if len(self.decor[group]):
+                self.decor_vaos[group] = DecorGroup(self.decor[group])
+
     def rebuild(self, deltas_only=False, local=False):
         # release any old data that's about to be replaced
         self.release()
@@ -121,10 +140,17 @@ class Chunk(Element):
             if rebuild:
                 self.rebuild(deltas_only=True, local=True)
 
-    def render(self, camera, uniforms={}):
+    def render(self, camera, uniforms={}, decor_uniforms={}):
         if self.tvaos:
             uniforms['world_light_pos'] = tuple(camera.light_pos)
             uniforms['world_transform'] = self.transform.matrix
             uniforms['view_projection'] = camera.prepped_matrix
             uniforms['eye_pos'] = camera.eye_pos
             self.tvaos.render(uniforms=uniforms)
+        
+        decor_uniforms['world_light_pos'] = tuple(camera.light_pos)
+        decor_uniforms['world_transform'] = self.transform.matrix
+        decor_uniforms['view_projection'] = camera.prepped_matrix
+        decor_uniforms['eye_pos'] = camera.eye_pos
+        for group in self.decor_vaos:
+            self.decor_vaos[group].vao.render(uniforms=decor_uniforms)

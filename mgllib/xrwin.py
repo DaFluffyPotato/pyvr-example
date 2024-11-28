@@ -96,7 +96,7 @@ class XRWindow(ElementSingleton):
                     projection = xr.Matrix4x4f.create_projection_fov(
                         graphics_api=xr.GraphicsAPI.OPENGL,
                         fov=view.fov,
-                        near_z=0.001,
+                        near_z=0.03,
                         far_z=200.0
                     )
 
