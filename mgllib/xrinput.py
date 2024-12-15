@@ -1,4 +1,9 @@
 import ctypes
+from ctypes import (
+    byref,
+    cast,
+    POINTER,
+)
 
 import numpy as np
 import glm
@@ -50,6 +55,17 @@ class Controller(Element):
         self.trigger = FloatButton('trigger')
 
         self.log = []
+
+    def vibrate(self, duration=0, amplitude=0.5):
+        vibration = xr.HapticVibration(amplitude=amplitude, duration=duration if duration else xr.MIN_HAPTIC_DURATION, frequency=xr.FREQUENCY_UNSPECIFIED)
+        xr.apply_haptic_feedback(
+            session=self.e['XRInput'].session,
+            haptic_action_info=xr.HapticActionInfo(
+                action=self.e['XRInput'].vibrate_action,
+                subaction_path=self.e['XRInput'].controller_paths[self.hand],
+            ),
+            haptic_feedback=cast(byref(vibration), POINTER(xr.HapticBaseHeader)).contents,
+        )
 
     def log_state(self):
         self.log.append((glm.vec3(self.pos), self.glm_quat, glm.vec3(self.aim_pos), self.aim_glm_quat, self.e['XRWindow'].dt))
@@ -153,6 +169,8 @@ class XRInput(ElementSingleton):
         self.head_transform = glm.translate(glm.vec3((0, 0, 0)))
 
         controller_paths = (xr.Path * 2)(xr.string_to_path(context.instance, '/user/hand/left'), xr.string_to_path(context.instance, '/user/hand/right'))
+        self.controller_paths = controller_paths
+
         controller_pose_action = xr.create_action(action_set=self.action_set, create_info=xr.ActionCreateInfo(
             action_type=xr.ActionType.POSE_INPUT,
             action_name='hand_pose',
@@ -265,12 +283,20 @@ class XRInput(ElementSingleton):
             subaction_paths=None,
         ))
 
+        self.vibrate_action = xr.create_action(action_set=self.action_set, create_info=xr.ActionCreateInfo(
+            action_type=xr.ActionType.VIBRATION_OUTPUT,
+            action_name="vibrate_hand",
+            localized_action_name="Vibrate Hand",
+            count_subaction_paths=len(controller_paths),
+            subaction_paths=controller_paths,
+        ))
+
         self.left_stick = None
         self.right_stick = None
 
         # docs suggest that /thumbstick as a vector2 may be necessary for some controllers
 
-        self.suggested_bindings = (xr.ActionSuggestedBinding * 16)(
+        self.suggested_bindings = (xr.ActionSuggestedBinding * 18)(
             xr.ActionSuggestedBinding(action=controller_pose_action, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/left/input/grip/pose")),
             xr.ActionSuggestedBinding(action=controller_pose_action, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/right/input/grip/pose")),
             xr.ActionSuggestedBinding(action=controller_aim_pose_action, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/left/input/aim/pose")),
@@ -286,7 +312,10 @@ class XRInput(ElementSingleton):
             xr.ActionSuggestedBinding(action=self.left_squeeze, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/left/input/squeeze/value")),
             xr.ActionSuggestedBinding(action=self.left_trigger, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/left/input/trigger/value")),
             xr.ActionSuggestedBinding(action=self.right_squeeze, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/right/input/squeeze/value")),
-            xr.ActionSuggestedBinding(action=self.right_trigger, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/right/input/trigger/value")))
+            xr.ActionSuggestedBinding(action=self.right_trigger, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/right/input/trigger/value")),
+            xr.ActionSuggestedBinding(action=self.vibrate_action, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/left/output/haptic")),
+            xr.ActionSuggestedBinding(action=self.vibrate_action, binding=xr.string_to_path(instance=context.instance, path_string=f"/user/hand/right/output/haptic")),
+            )
 
         self.suggest_bindings()
 

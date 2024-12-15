@@ -126,7 +126,7 @@ class XRWindow(ElementSingleton):
                         size = (context.swapchains[0].width, context.swapchains[0].height)
                         GL.glBlitFramebuffer(
                             0, 0, size[0], size[1], 0, 0,
-                            1280, 720,
+                            1920, 1080,
                             GL.GL_COLOR_BUFFER_BIT,
                             GL.GL_NEAREST
                         )

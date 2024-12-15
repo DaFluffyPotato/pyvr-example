@@ -28,7 +28,7 @@ class Demo(ElementSingleton):
     def __init__(self):
         super().__init__()
 
-        self.window = XRWindow(self, (1280, 720))
+        self.window = XRWindow(self, (1920, 1080))
 
         self.pg_window = None
 

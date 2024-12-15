@@ -9,6 +9,8 @@ PHYSICS_EPSILON = 0.00001
 
 SOUND_DISTANCE_SCALE = 0.75
 
+HOVER_COOLDOWN = 0.25
+
 RECOIL_PATTERNS = {
     'default': {
         'start': [

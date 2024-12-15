@@ -7,7 +7,7 @@ from .shapes.cuboid import CornerCuboid
 from .shapes.sphere import sphere_collide
 from .elements import Element
 from .mat3d import prep_mat, quat_scale, vec3_exponent
-from .const import HAND_VELOCITY_TIMEFRAME, PHYSICS_EPSILON, RECOIL_PATTERNS
+from .const import HAND_VELOCITY_TIMEFRAME, PHYSICS_EPSILON, RECOIL_PATTERNS, HOVER_COOLDOWN
 
 from .tracer import Tracer
 
@@ -18,6 +18,8 @@ class VRItemComponent(Element):
 # the two types are grip and interact (grib vs trigger)
 class VRItemPoint(Element):
     def __init__(self, point_type, pos, radius=0.3, default=False):
+        super().__init__()
+
         self.parent = None
         self.type = point_type
         self.pos = glm.vec3(pos)
@@ -30,6 +32,8 @@ class VRItemPoint(Element):
         self.input_pos = glm.vec3(0.0, 0.0, 0.0)
 
         self.interacting = None
+
+        self.hover_vibrate_cooldown = [0, 0]
 
     @property
     def scaled_pos(self):
@@ -59,8 +63,18 @@ class VRItemPoint(Element):
                     self.parent.alt_grip = self
 
                 self.parent.e['Sounds'].play_from('grab', position=self.world_pos, volume=0.7)
+
+                hand.vibrate(amplitude=1.0)
+
+    def handle_hover(self, hand):
+        if not hand.interacting:
+            if not self.hover_vibrate_cooldown[hand.hand]:
+                hand.vibrate(amplitude=0.4)
+            self.hover_vibrate_cooldown[hand.hand] = HOVER_COOLDOWN
     
     def update(self, hand):
+        self.hover_vibrate_cooldown[0] = max(self.hover_vibrate_cooldown[0] - self.e['XRWindow'].dt, 0)
+        self.hover_vibrate_cooldown[1] = max(self.hover_vibrate_cooldown[1] - self.e['XRWindow'].dt, 0)
         if hand.interacting == self:
             if hand.squeeze.holding:    
                 self.input_pos = glm.vec3(hand.pos)
@@ -94,6 +108,7 @@ class VRItemPoint(Element):
                 self.interacting = None
 
                 self.parent.e['Sounds'].play_from('release', position=self.world_pos, volume=0.45)
+                hand.vibrate(amplitude=0.7)
 
 class VRItem(Element):
     def __init__(self, base_obj, pos=None):
@@ -133,13 +148,25 @@ class VRItem(Element):
         # simple grab makes it so that grabbing an unheld object within the radius of the origin binds the hand to the default grip point
         self.simple_grab = 0
 
+        # this is the cooldown for the simple_grab since that doesn't use a point
+        self.hover_vibrate_cooldown = [0, 0]
+
         self.calculate_transform()
 
     @property
     def free(self):
         return not self.primary_grip
+    
+    def handle_hover(self, hand):
+        if not hand.interacting:
+            if not self.hover_vibrate_cooldown[hand.hand]:
+                hand.vibrate(amplitude=0.4)
+            self.hover_vibrate_cooldown[hand.hand] = HOVER_COOLDOWN
 
     def update(self):
+        self.hover_vibrate_cooldown[0] = max(self.hover_vibrate_cooldown[0] - self.e['XRWindow'].dt, 0)
+        self.hover_vibrate_cooldown[1] = max(self.hover_vibrate_cooldown[1] - self.e['XRWindow'].dt, 0)
+
         if self.primary_grip:
             self.velocity = glm.vec3(0.0, 0.0, 0.0)
         else:
@@ -291,12 +318,14 @@ class VRItem(Element):
         hand_pos = glm.vec3(hand.pos)
         if self.free and self.simple_grab:
             if sphere_collide(hand_pos, self.pos, self.simple_grab):
+                self.handle_hover(hand)
                 if hand.squeeze.pressed:
                     self.default_grip.grab(hand)
 
         else:
             for point in self.points['grip']:
                 if sphere_collide(hand_pos, point.world_pos, point.radius):
+                    point.handle_hover(hand)
                     if hand.squeeze.pressed:
                         point.grab(hand)
         
@@ -348,6 +377,12 @@ class Gun(VRItem):
             self.recoil_velocity += glm.vec2(recoil)
             self.spray_control_force = 0
             self.spray_index += 1
+
+            if self.primary_grip and self.primary_grip.interacting:
+                self.primary_grip.interacting.vibrate(amplitude=1.0)
+
+            if self.alt_grip and self.alt_grip.interacting:
+                self.alt_grip.interacting.vibrate(amplitude=1.0)
 
     def handle_recoil(self):
         dt = self.e['XRWindow'].dt
