@@ -435,7 +435,7 @@ class XRInput(ElementSingleton):
 
             left_upper = xr.get_action_state_boolean(session=self.session, get_info=xr.ActionStateGetInfo(action=self.left_upper_button, subaction_path=xr.NULL_PATH))
             self.hands[0].holding_upper = left_upper.current_state
-            self.hands[0].pressed_upper = left_upper.current_state and left_lower.changed_since_last_sync
+            self.hands[0].pressed_upper = left_upper.current_state and left_upper.changed_since_last_sync
 
             right_lower = xr.get_action_state_boolean(session=self.session, get_info=xr.ActionStateGetInfo(action=self.right_lower_button, subaction_path=xr.NULL_PATH))
             self.hands[1].holding_lower = right_lower.current_state

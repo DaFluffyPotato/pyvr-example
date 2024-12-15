@@ -5,7 +5,7 @@ import glm
 from .model.entity3d import Entity3D
 from .shapes.cuboid import CornerCuboid
 from .shapes.sphere import sphere_collide
-from .elements import Element
+from .elements import Element, elems
 from .mat3d import prep_mat, quat_scale, vec3_exponent
 from .const import HAND_VELOCITY_TIMEFRAME, PHYSICS_EPSILON, RECOIL_PATTERNS, HOVER_COOLDOWN
 
@@ -44,8 +44,10 @@ class VRItemPoint(Element):
         return self.parent.transform * self.pos
     
     def grab(self, hand):
-        if self.type == 'grip':
+        if self.type in {'grip', 'trigger_grip'}:
             if not (hand.interacting or self.interacting):
+                if self.parent.in_slot:
+                    self.parent.in_slot.take()
                 hand.interacting = self
                 self.interacting = hand
                 self.parent.velocity_reset()
@@ -76,7 +78,12 @@ class VRItemPoint(Element):
         self.hover_vibrate_cooldown[0] = max(self.hover_vibrate_cooldown[0] - self.e['XRWindow'].dt, 0)
         self.hover_vibrate_cooldown[1] = max(self.hover_vibrate_cooldown[1] - self.e['XRWindow'].dt, 0)
         if hand.interacting == self:
-            if hand.squeeze.holding:    
+            holding = False
+            if (self.type == 'grip') and hand.squeeze.holding:
+                holding = True
+            if (self.type == 'trigger_grip') and hand.trigger.holding:
+                holding = True
+            if holding:
                 self.input_pos = glm.vec3(hand.pos)
                 self.input_rotation = glm.quat(hand.aim_rot[3], *(hand.aim_rot[:3]))
             elif (self.parent.primary_grip == self) or (self.parent.alt_grip == self):
@@ -111,11 +118,15 @@ class VRItemPoint(Element):
                 hand.vibrate(amplitude=0.7)
 
 class VRItem(Element):
-    def __init__(self, base_obj, pos=None):
+    def __init__(self, base_obj, pos=None, parts={}):
         super().__init__()
+
+        self.parts = parts.copy()
 
         self.floor_item = False
         self.floor_mode = False
+
+        self.in_slot = None
 
         self.hover_height = 0.65
         self.bob_force = 0.35
@@ -170,7 +181,11 @@ class VRItem(Element):
         if self.primary_grip:
             self.velocity = glm.vec3(0.0, 0.0, 0.0)
         else:
-            if self.floor_mode:
+            if self.in_slot:
+                self.velocity = glm.vec3(0.0, 0.0, 0.0)
+                self.pos = self.in_slot.pos
+                self.rotation = self.in_slot.rot
+            elif self.floor_mode:
                 # hovering logic
                 self.angular_velocity = glm.quat(glm.rotate(0.3, (0, 1, 0)))
                 self.velocity.y = max(-self.bob_force, self.velocity.y)
@@ -314,23 +329,41 @@ class VRItem(Element):
         else:
             self.transform = glm.translate(self.pos) * glm.mat4(self.spin) * glm.mat4(self.rotation) * scale_mat
 
+    def handle_interaction_event(self, event_type, hand, point):
+        pass
+
     def handle_interactions(self, hand):
         hand_pos = glm.vec3(hand.pos)
         if self.free and self.simple_grab:
             if sphere_collide(hand_pos, self.pos, self.simple_grab):
                 self.handle_hover(hand)
-                if hand.squeeze.pressed:
+                if hand.squeeze.pressed and (self.default_grip.type == 'grip'):
                     self.default_grip.grab(hand)
-
+                elif hand.trigger.pressed and (self.default_grip.type == 'trigger_grip'):
+                    self.default_grip.grab(hand)
         else:
-            for point in self.points['grip']:
-                if sphere_collide(hand_pos, point.world_pos, point.radius):
-                    point.handle_hover(hand)
-                    if hand.squeeze.pressed:
-                        point.grab(hand)
+            for group in self.points:
+                for point in self.points[group]:
+                    if group in {'grip', 'trigger_grip'}:
+                        if sphere_collide(hand_pos, point.world_pos, point.radius):
+                            point.handle_hover(hand)
+                            if group == 'grip':
+                                if hand.squeeze.pressed:
+                                    point.grab(hand)
+                            if group == 'trigger_grip':
+                                if hand.trigger.pressed:
+                                    point.grab(hand)
+                    elif sphere_collide(hand_pos, point.world_pos, point.radius):
+                        self.handle_interaction_event('hover', hand, point)
+                        if hand.squeeze.pressed:
+                            self.handle_interaction_event('grip', hand, point)
+                        elif hand.trigger.pressed:
+                            self.handle_interaction_event('trigger', hand, point)
         
-        for point in self.points['grip']:
-            point.update(hand)
+        for group in self.points:
+            if group in {'grip', 'trigger_grip'}:
+                for point in self.points[group]:
+                    point.update(hand)
 
     def render(self, camera, uniforms={}):
         uniforms['world_light_pos'] = tuple(camera.light_pos)
@@ -340,8 +373,8 @@ class VRItem(Element):
         self.base_obj.vao.render(uniforms=uniforms)
 
 class Gun(VRItem):
-    def __init__(self, base_obj, pos=None):
-        super().__init__(base_obj, pos=pos)
+    def __init__(self, base_obj, pos=None, parts={}):
+        super().__init__(base_obj, pos=pos, parts=parts)
 
         self.type = 'm4'
 
@@ -359,6 +392,26 @@ class Gun(VRItem):
         self.spray_control_force = 0
         self.spray_control_force_scale = 6
         self.spray_index = 0
+
+        self.mag_offset = None
+        self.mag_loaded = True
+
+    def render(self, camera, uniforms={}):
+        super().render(camera, uniforms=uniforms)
+        if self.mag_offset and ('mag' in self.parts) and self.mag_loaded:
+            # camera-related uniforms already set inside super method
+            uniforms['world_transform'] = prep_mat(self.transform * glm.translate(self.mag_offset))
+            self.parts['mag'].vao.render(uniforms=uniforms)
+
+    def handle_interaction_event(self, event_type, hand, point):
+        super().handle_interaction_event(event_type, hand, point)
+
+        if point.type == 'magazine':
+            if (event_type == 'trigger') and (not hand.interacting):
+                self.mag_loaded = False
+                mag = Magazine(self, hand.pos)
+                mag.default_grip.grab(hand)
+                self.e['Demo'].items.append(mag)
 
     def fire(self):
         if 'muzzle' in self.points:
@@ -421,6 +474,11 @@ class Gun(VRItem):
 
         self.handle_recoil()
 
+        if self.primary_grip and self.primary_grip.interacting and self.primary_grip.interacting.pressed_upper and self.mag_loaded:
+            self.mag_loaded = False
+            mag = Magazine(self)
+            self.e['Demo'].items.append(mag)
+
         if self.primary_grip and self.primary_grip.interacting and self.primary_grip.interacting.trigger.holding and (self.primary_grip == self.default_grip):
             if not self.cooldown:
                 self.fire()
@@ -439,9 +497,27 @@ class Knife(VRItem):
 
         self.simple_grab = 0.3
 
+class Magazine(VRItem):
+    def __init__(self, src_weapon, pos=None):
+        if not pos:
+            # select dedicated magazine position from source weapon
+            pos = src_weapon.transform * src_weapon.mag_offset
+        super().__init__(src_weapon.parts['mag'], pos=pos)
+
+        self.rotation = glm.quat(src_weapon.holding_rotation)
+
+        self.scale = glm.vec3(src_weapon.scale)
+
+        self.add_point(VRItemPoint('trigger_grip', (0, 0, 0), default=True))
+
+        self.bounce = 0.5
+        self.weight = 0.75
+
 class M4(Gun):
     def __init__(self, base_obj, pos=None):
-        super().__init__(base_obj, pos=pos)
+        super().__init__(base_obj, pos=pos, parts={'mag': elems['Demo'].m4_mag_res})
+
+        self.mag_offset = glm.vec3(0, -7.5 / 16, 0.5 / 16)
 
         self.scale = glm.vec3(0.23, 0.23, 0.23)
         self.weight = 1.25
@@ -453,6 +529,8 @@ class M4(Gun):
         self.add_point(VRItemPoint('grip', (0, 0, -0.735)))
 
         self.add_point(VRItemPoint('muzzle', (0, 0.18, -2.6)))
+
+        self.add_point(VRItemPoint('magazine', self.mag_offset, radius=0.1))
 
     def update(self):
         super().update()

@@ -18,7 +18,7 @@ from mgllib.player_body import PlayerBody
 from mgllib.world.world import World, BLOCK_SCALE
 from mgllib.world.decor import Decor
 from mgllib.skybox import Skybox
-from mgllib.vritem import Knife, M4
+from mgllib.vritem import Knife, M4, Magazine
 from mgllib.model.polygon import Polygon, TETRAHEDRON
 from mgllib.npc import NPC
 from mgllib.sound import Sounds
@@ -77,6 +77,7 @@ class Demo(ElementSingleton):
 
         self.knife_res = OBJ('data/models/knife/knife.obj', self.main_shader, centered=False)
         self.m4_res = OBJ('data/models/m4/m4.obj', self.main_shader, centered=False)
+        self.m4_mag_res = OBJ('data/models/m4/mag.obj', self.main_shader, centered=False)
 
         self.tracer_res = OBJ('data/models/tracer/tracer.obj', self.tracer_shader, centered=False, simple=True)
 
@@ -88,6 +89,8 @@ class Demo(ElementSingleton):
         self.items = [Knife(self.knife_res, (0, 1, i - 5)) for i in range(10)]
         for i in range(3):
             self.items.append(M4(self.m4_res, (7, 1, i - 1)))
+            if i == 0:
+                self.items.append(Magazine(self.items[-1], (7, 1, i - 1)))
 
         self.npcs = []
 

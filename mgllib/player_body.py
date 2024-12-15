@@ -8,6 +8,7 @@ from .mat3d import Transform3D, quat_to_mat
 from .shapes.cuboid import FloorCuboid, CornerCuboid, NO_COLLISIONS
 from .world.const import BLOCK_SCALE
 from .elements import ElementSingleton, Element
+from .vritem import Magazine, Gun
 
 '''
 Headset + Virtual Body Transform Model
@@ -26,6 +27,36 @@ Apply headset movement as body motion.
 
 Assign camera world matrix as the inverse of the body matrix.
 '''
+
+class InventorySlot(Element):
+    def __init__(self, origin=None):
+        super().__init__()
+
+        self.holding = None
+        self.origin = glm.vec3(origin) if origin else glm.vec3(0, 0, 0)
+        self.pos = glm.vec3(0, 0, 0)
+        self.rot = glm.quat()
+
+    def attach(self, item):
+        if self.holding:
+            self.holding.in_slot = None
+
+        self.holding = item
+        item.in_slot = self
+    
+    def take(self):
+        item = self.holding
+        if self.holding:
+            self.holding.in_slot = None
+        self.holding = None
+        return item
+
+    def transform(self, transform):
+        # translate
+        self.pos = glm.vec3(transform.rotation_matrix * glm.vec3(self.origin) + transform.pos)
+
+        # rotate
+        self.rot = glm.quat(transform.rotation_matrix)
 
 class PlayerBody(ElementSingleton):
     def __init__(self):
@@ -57,6 +88,8 @@ class PlayerBody(ElementSingleton):
         self.terminal_velocity = 19
         self.air_time = 0
         self.jump_force = 4.25
+
+        self.inventory = {'left_hip_mag': InventorySlot(), 'right_hip_mag': InventorySlot()}
     
     def move(self, movement):
         blockers = [CornerCuboid(block.scaled_world_pos, (block.scale, block.scale, block.scale)) for block in self.e['World'].nearby_blocks(self.cuboid.origin, radii=(1, 3, 1))]
@@ -124,6 +157,37 @@ class PlayerBody(ElementSingleton):
 
         self.left_hand.transform(self.world_pos)
         self.right_hand.transform(self.world_pos)
+
+        self.inventory['left_hip_mag'].origin = glm.vec3(-0.25, self.e['XRInput'].raw_head_pos[1] * 0.54, 0)
+        self.inventory['right_hip_mag'].origin = glm.vec3(0.25, self.e['XRInput'].raw_head_pos[1] * 0.54, 0)
+        for slot in self.inventory:
+            self.inventory[slot].transform(self.world_pos)
+
+        holding_weapon = None
+        if self.right_hand.interacting and self.right_hand.interacting.parent:
+            if issubclass(self.right_hand.interacting.parent.__class__, Gun):
+                holding_weapon = self.right_hand.interacting.parent
+        elif self.left_hand.interacting and self.left_hand.interacting.parent:
+            if issubclass(self.left_hand.interacting.parent.__class__, Gun):
+                holding_weapon = self.left_hand.interacting.parent
+        if holding_weapon:
+            if not (self.inventory['left_hip_mag'].holding):
+                new_mag = Magazine(holding_weapon)
+                self.inventory['left_hip_mag'].attach(new_mag)
+                self.e['Demo'].items.append(new_mag)
+            if not (self.inventory['right_hip_mag'].holding):
+                new_mag = Magazine(holding_weapon)
+                self.inventory['right_hip_mag'].attach(new_mag)
+                self.e['Demo'].items.append(new_mag)
+        else:
+            if self.inventory['left_hip_mag'].holding:
+                mag = self.inventory['left_hip_mag'].take()
+                if mag in self.e['Demo'].items:
+                    self.e['Demo'].items.remove(mag)
+            if self.inventory['right_hip_mag'].holding:
+                mag = self.inventory['right_hip_mag'].take()
+                if mag in self.e['Demo'].items:
+                    self.e['Demo'].items.remove(mag)
 
         self.e['XRCamera'].world_rotation = list(self.world_pos.rotation)
         self.e['XRCamera'].world_matrix = np.linalg.inv(self.world_pos.npmatrix)
