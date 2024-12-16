@@ -1,5 +1,6 @@
 import gc
 import time
+import math
 
 import glm
 import numpy as np
@@ -48,6 +49,16 @@ class XRState(ElementSingleton):
 
         self.camera = XRCamera()
         self.orientation = None
+
+    @property
+    def forward_vec(self):
+        return glm.mat4(glm.quat(self.orientation[3], *self.orientation[:3])) * glm.vec3(0, 0, -1)
+
+    @property
+    def xz_angle(self):
+        if self.orientation:
+            return math.atan2(self.forward_vec.x, self.forward_vec.z)
+        return 0
 
 class XRWindow(ElementSingleton):
     def __init__(self, application, dimensions=(800, 800), fps=165, title='VR Test'):

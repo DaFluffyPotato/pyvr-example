@@ -55,6 +55,8 @@ class Controller(Element):
         self.trigger = FloatButton('trigger')
 
         self.log = []
+        
+        self.other = None
 
     def vibrate(self, duration=0, amplitude=0.5):
         vibration = xr.HapticVibration(amplitude=amplitude, duration=duration if duration else xr.MIN_HAPTIC_DURATION, frequency=xr.FREQUENCY_UNSPECIFIED)

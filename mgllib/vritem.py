@@ -167,6 +167,11 @@ class VRItem(Element):
     @property
     def free(self):
         return not self.primary_grip
+
+    def first_point(self, p_type):
+        if (p_type in self.points) and len(self.points[p_type]):
+            return self.points[p_type][0].world_pos
+        return glm.vec3(0, 0, 0)
     
     def handle_hover(self, hand):
         if not hand.interacting:
@@ -412,6 +417,7 @@ class Gun(VRItem):
                 mag = Magazine(self, hand.pos)
                 mag.default_grip.grab(hand)
                 self.e['Demo'].items.append(mag)
+                self.e['Sounds'].play_from('release_mag', position=self.first_point('slot_reference'), volume=0.4)
 
     def fire(self):
         if 'muzzle' in self.points:
@@ -478,6 +484,7 @@ class Gun(VRItem):
             self.mag_loaded = False
             mag = Magazine(self)
             self.e['Demo'].items.append(mag)
+            self.e['Sounds'].play_from('release_mag', position=self.first_point('slot_reference'), volume=0.4)
 
         if self.primary_grip and self.primary_grip.interacting and self.primary_grip.interacting.trigger.holding and (self.primary_grip == self.default_grip):
             if not self.cooldown:
@@ -510,8 +517,39 @@ class Magazine(VRItem):
 
         self.add_point(VRItemPoint('trigger_grip', (0, 0, 0), default=True))
 
+        self.add_point(VRItemPoint('slot_reference', (0, 4.6 / 16, 0)))
+
         self.bounce = 0.5
         self.weight = 0.75
+
+        self.held_outside_load_range = False
+
+        self.calculate_transform()
+
+    def update(self):
+        super().update()
+
+        # check if being held
+        if self.primary_grip and self.primary_grip.interacting:
+            # check if the other hand is holding something
+            if self.primary_grip.interacting.other and self.primary_grip.interacting.other.interacting:
+                gun = self.primary_grip.interacting.other.interacting.parent
+                # check if the other item is a gun
+                if issubclass(gun.__class__, Gun):
+                    # if close enough, load mag
+                    if glm.length(gun.first_point('slot_reference') - self.first_point('slot_reference')) < gun.reload_range:
+                        if self.held_outside_load_range:
+                            gun.mag_loaded = True
+                            self.primary_grip.interacting.vibrate(amplitude=1.0)
+                            self.e['Sounds'].play_from('load', position=self.first_point('slot_reference'), volume=0.6)
+                            # unlink mag from hand
+                            self.primary_grip.interacting.interacting = None
+                            self.primary_grip.interacting = None
+                            # delete self
+                            return True
+                    elif not self.held_outside_load_range:
+                        if glm.length(gun.first_point('slot_reference') - self.first_point('slot_reference')) > gun.reload_range * 1.5:
+                            self.held_outside_load_range = True
 
 class M4(Gun):
     def __init__(self, base_obj, pos=None):
@@ -522,6 +560,8 @@ class M4(Gun):
         self.scale = glm.vec3(0.23, 0.23, 0.23)
         self.weight = 1.25
 
+        self.reload_range = 0.05
+
         self.rpm = 800
 
         self.add_point(VRItemPoint('grip', (0, -0.26, 0.735), default=True))
@@ -531,6 +571,8 @@ class M4(Gun):
         self.add_point(VRItemPoint('muzzle', (0, 0.18, -2.6)))
 
         self.add_point(VRItemPoint('magazine', self.mag_offset, radius=0.1))
+
+        self.add_point(VRItemPoint('slot_reference', (0, self.mag_offset.y + 3 / 16, self.mag_offset.z)))
 
     def update(self):
         super().update()

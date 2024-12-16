@@ -89,8 +89,6 @@ class Demo(ElementSingleton):
         self.items = [Knife(self.knife_res, (0, 1, i - 5)) for i in range(10)]
         for i in range(3):
             self.items.append(M4(self.m4_res, (7, 1, i - 1)))
-            if i == 0:
-                self.items.append(Magazine(self.items[-1], (7, 1, i - 1)))
 
         self.npcs = []
 
@@ -145,10 +143,12 @@ class Demo(ElementSingleton):
 
     def single_update(self):
         self.player.cycle()
-        for item in self.items:
+        for item in list(self.items):
             for hand in self.player.hands:
                 item.handle_interactions(hand)
-            item.update()
+            kill = item.update()
+            if kill:
+                self.items.remove(item)
 
         for tracer in list(self.tracers):
             kill = tracer.update()

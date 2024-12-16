@@ -9,6 +9,7 @@ from .shapes.cuboid import FloorCuboid, CornerCuboid, NO_COLLISIONS
 from .world.const import BLOCK_SCALE
 from .elements import ElementSingleton, Element
 from .vritem import Magazine, Gun
+from .util import angle_pull_within
 
 '''
 Headset + Virtual Body Transform Model
@@ -51,12 +52,12 @@ class InventorySlot(Element):
         self.holding = None
         return item
 
-    def transform(self, transform):
+    def transform(self, pos_transform, rotation):
         # translate
-        self.pos = glm.vec3(transform.rotation_matrix * glm.vec3(self.origin) + transform.pos)
+        self.pos = glm.vec3(glm.rotate(rotation, glm.vec3(0, 1, 0)) * glm.vec3(self.origin) + pos_transform.pos)
 
         # rotate
-        self.rot = glm.quat(transform.rotation_matrix)
+        self.rot = glm.quat(glm.rotate(rotation, glm.vec3(0, 1, 0)))
 
 class PlayerBody(ElementSingleton):
     def __init__(self):
@@ -70,6 +71,8 @@ class PlayerBody(ElementSingleton):
         self.hands = [Controller(0), Controller(1)]
         for hand in self.hands:
             hand.parent = self
+        self.hands[0].other = self.hands[1]
+        self.hands[1].other = self.hands[0]
 
         self.snap_direction = 0
         self.snap_val = 0
@@ -88,6 +91,10 @@ class PlayerBody(ElementSingleton):
         self.terminal_velocity = 19
         self.air_time = 0
         self.jump_force = 4.25
+
+        self.xz_angle = 0
+        self.xz_slack = 1.0
+        self.xz_angle_slacked = 0
 
         self.inventory = {'left_hip_mag': InventorySlot(), 'right_hip_mag': InventorySlot()}
     
@@ -133,6 +140,9 @@ class PlayerBody(ElementSingleton):
             self.snap_direction = 0
         self.snap_val = snap_val
 
+        self.xz_angle = self.world_pos.rotation[1] + self.e['XRState'].xz_angle
+        self.xz_angle_slacked = angle_pull_within(self.xz_angle_slacked, self.xz_angle, self.xz_slack)
+
         self.velocity.y = max(-self.terminal_velocity, self.velocity.y - self.gravity * self.e['XRWindow'].dt)
 
         if self.right_hand.pressed_lower and (self.air_time < 0.25):
@@ -161,7 +171,7 @@ class PlayerBody(ElementSingleton):
         self.inventory['left_hip_mag'].origin = glm.vec3(-0.25, self.e['XRInput'].raw_head_pos[1] * 0.54, 0)
         self.inventory['right_hip_mag'].origin = glm.vec3(0.25, self.e['XRInput'].raw_head_pos[1] * 0.54, 0)
         for slot in self.inventory:
-            self.inventory[slot].transform(self.world_pos)
+            self.inventory[slot].transform(self.world_pos, self.xz_angle_slacked)
 
         holding_weapon = None
         if self.right_hand.interacting and self.right_hand.interacting.parent:
