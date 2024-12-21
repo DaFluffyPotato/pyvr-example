@@ -170,6 +170,8 @@ class XRInput(ElementSingleton):
         self.raw_head_orientation = glm.quat()
         self.head_transform = glm.translate(glm.vec3((0, 0, 0)))
 
+        self.head_movement = (0, 0, 0)
+
         controller_paths = (xr.Path * 2)(xr.string_to_path(context.instance, '/user/hand/left'), xr.string_to_path(context.instance, '/user/hand/right'))
         self.controller_paths = controller_paths
 
@@ -293,8 +295,8 @@ class XRInput(ElementSingleton):
             subaction_paths=controller_paths,
         ))
 
-        self.left_stick = None
-        self.right_stick = None
+        self.left_stick = (0, 0)
+        self.right_stick = (0, 0)
 
         # docs suggest that /thumbstick as a vector2 may be necessary for some controllers
 

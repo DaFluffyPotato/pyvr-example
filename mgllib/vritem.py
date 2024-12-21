@@ -8,6 +8,7 @@ from .shapes.sphere import sphere_collide
 from .elements import Element, elems
 from .mat3d import prep_mat, quat_scale, vec3_exponent
 from .const import HAND_VELOCITY_TIMEFRAME, PHYSICS_EPSILON, RECOIL_PATTERNS, HOVER_COOLDOWN
+from .util import segment_project_progress
 
 from .tracer import Tracer
 
@@ -35,6 +36,8 @@ class VRItemPoint(Element):
 
         self.hover_vibrate_cooldown = [0, 0]
 
+        self.hand_override = None
+
     @property
     def scaled_pos(self):
         return self.pos * self.parent.scale
@@ -43,26 +46,37 @@ class VRItemPoint(Element):
     def world_pos(self):
         return self.parent.transform * self.pos
     
+    def offsetted_world_pos(self, offset):
+        return self.parent.transform * (self.pos + offset)
+    
     def grab(self, hand):
-        if self.type in {'grip', 'trigger_grip'}:
+        if self.type in {'grip', 'trigger_grip', 'grip_interact', 'trigger_interact'}:
             if not (hand.interacting or self.interacting):
-                if self.parent.in_slot:
-                    self.parent.in_slot.take()
-                hand.interacting = self
-                self.interacting = hand
-                self.parent.velocity_reset()
-                self.parent.floor_mode = False
+                if self.type in {'grip', 'trigger_grip'}:
+                    if self.parent.in_slot:
+                        self.parent.in_slot.take()
+                    
+                    self.parent.velocity_reset()
+                    self.parent.floor_mode = False
+                if (self.type in {'grip_interact', 'trigger_interact'}) and (self.parent.primary_grip):
+                    # for now, the interaction points only function when the object is held
+                    hand.interacting = self
+                    self.interacting = hand
 
-                # handle grip arrangement
-                if not self.parent.primary_grip:
-                    self.parent.primary_grip = self
-                elif self.parent.default_grip == self:
-                    # move old primary to alt because this point is the default
-                    self.parent.alt_grip = self.parent.primary_grip
-                    self.parent.primary_grip = self
-                else:
-                    # primary is taken and this isn't the default, so make self the alt grip
-                    self.parent.alt_grip = self
+                if self.type in {'grip', 'trigger_grip'}:
+                    hand.interacting = self
+                    self.interacting = hand
+                    
+                    # handle grip arrangement
+                    if not self.parent.primary_grip:
+                        self.parent.primary_grip = self
+                    elif self.parent.default_grip == self:
+                        # move old primary to alt because this point is the default
+                        self.parent.alt_grip = self.parent.primary_grip
+                        self.parent.primary_grip = self
+                    else:
+                        # primary is taken and this isn't the default, so make self the alt grip
+                        self.parent.alt_grip = self
 
                 self.parent.e['Sounds'].play_from('grab', position=self.world_pos, volume=0.7)
 
@@ -78,44 +92,56 @@ class VRItemPoint(Element):
         self.hover_vibrate_cooldown[0] = max(self.hover_vibrate_cooldown[0] - self.e['XRWindow'].dt, 0)
         self.hover_vibrate_cooldown[1] = max(self.hover_vibrate_cooldown[1] - self.e['XRWindow'].dt, 0)
         if hand.interacting == self:
+            if (not self.parent.primary_grip) and (self.type in {'grip_interact', 'trigger_interact'}):
+                # release an interact point if the item is dropped/thrown
+                hand.interacting = None
+                self.interacting = None
+
             holding = False
-            if (self.type == 'grip') and hand.squeeze.holding:
+            if (self.type in {'grip', 'grip_interact'}) and hand.squeeze.holding:
                 holding = True
-            if (self.type == 'trigger_grip') and hand.trigger.holding:
+            if (self.type in {'trigger_grip', 'trigger_interact'}) and hand.trigger.holding:
                 holding = True
             if holding:
                 self.input_pos = glm.vec3(hand.pos)
                 self.input_rotation = glm.quat(hand.aim_rot[3], *(hand.aim_rot[:3]))
             elif (self.parent.primary_grip == self) or (self.parent.alt_grip == self):
                 hand.interacting = None
-                if self.parent.primary_grip == self:
-                    if self.parent.alt_grip:
-                        # make alt grip primary
-                        self.parent.primary_grip = self.parent.alt_grip
-                        self.parent.alt_grip = None
+                if self.type in {'grip', 'trigger_grip'}:
+                    if self.parent.primary_grip == self:
+                        if self.parent.alt_grip:
+                            # make alt grip primary
+                            self.parent.primary_grip = self.parent.alt_grip
+                            self.parent.alt_grip = None
+                        else:
+                            self.parent.primary_grip = None
+
+                            # handle throw because this is was the last grip
+                            self.parent.velocity = vec3_exponent(hand.velocity(HAND_VELOCITY_TIMEFRAME), 1.7) / self.parent.weight
+
+                            # angular velocity must be adjusted for snap turn orientation
+                            self.parent.angular_velocity = hand.angular_velocity(HAND_VELOCITY_TIMEFRAME)
+
+                            self.parent.rotation = self.input_rotation
+
+                            # undo pivot placement by finding origin offset after the transform
+                            origin = glm.vec3(0.0, 0.0, 0.0)
+                            #interaction_point_offset = (self.parent.transform * origin) - self.world_pos
+                            self.parent.pos = self.parent.transform * origin
                     else:
-                        self.parent.primary_grip = None
-
-                        # handle throw because this is was the last grip
-                        self.parent.velocity = vec3_exponent(hand.velocity(HAND_VELOCITY_TIMEFRAME), 1.7) / self.parent.weight
-
-                        # angular velocity must be adjusted for snap turn orientation
-                        self.parent.angular_velocity = hand.angular_velocity(HAND_VELOCITY_TIMEFRAME)
-
-                        self.parent.rotation = self.input_rotation
-
-                        # undo pivot placement by finding origin offset after the transform
-                        origin = glm.vec3(0.0, 0.0, 0.0)
-                        #interaction_point_offset = (self.parent.transform * origin) - self.world_pos
-                        self.parent.pos = self.parent.transform * origin
-                else:
-                    # this must be an alt grip
-                    self.parent.alt_grip = None
+                        # this must be an alt grip
+                        self.parent.alt_grip = None
 
                 self.interacting = None
 
                 self.parent.e['Sounds'].play_from('release', position=self.world_pos, volume=0.45)
                 hand.vibrate(amplitude=0.7)
+            if (not holding) and (self.type in {'grip_interact', 'trigger_interact'}):
+                hand.interacting = None
+                self.interacting = None
+                self.parent.e['Sounds'].play_from('release', position=self.world_pos, volume=0.45)
+                hand.vibrate(amplitude=0.7)
+
 
 class VRItem(Element):
     def __init__(self, base_obj, pos=None, parts={}):
@@ -349,13 +375,13 @@ class VRItem(Element):
         else:
             for group in self.points:
                 for point in self.points[group]:
-                    if group in {'grip', 'trigger_grip'}:
+                    if group in {'grip', 'trigger_grip', 'grip_interact', 'trigger_interact'}:
                         if sphere_collide(hand_pos, point.world_pos, point.radius):
                             point.handle_hover(hand)
-                            if group == 'grip':
+                            if group in {'grip', 'grip_interact'}:
                                 if hand.squeeze.pressed:
                                     point.grab(hand)
-                            if group == 'trigger_grip':
+                            if group in {'trigger_grip', 'trigger_interact'}:
                                 if hand.trigger.pressed:
                                     point.grab(hand)
                     elif sphere_collide(hand_pos, point.world_pos, point.radius):
@@ -366,7 +392,7 @@ class VRItem(Element):
                             self.handle_interaction_event('trigger', hand, point)
         
         for group in self.points:
-            if group in {'grip', 'trigger_grip'}:
+            if group in {'grip', 'trigger_grip', 'grip_interact', 'trigger_interact'}:
                 for point in self.points[group]:
                     point.update(hand)
 
@@ -390,6 +416,12 @@ class Gun(VRItem):
         self.rpm = 600
         self.cooldown = 0
 
+        self.capacity = 10
+        self.remaining_capacity = self.capacity
+        self.chambered = True
+
+        self.low_ammo_threshold = 10
+
         self.recoil_scale = glm.vec2(0.65, 1.25)
         self.recoil_pattern = 'default'
         self.recoil_velocity = glm.vec2(0.0, 0.0)
@@ -399,7 +431,11 @@ class Gun(VRItem):
         self.spray_index = 0
 
         self.mag_offset = None
+        self.rack_offset = glm.vec3(0.0, 0.0, 0.0)
         self.mag_loaded = True
+        self.rack_point = None
+        self.rack_vector = glm.vec3(0.0, 0.0, -1.0)
+        self.rack_progress_state = 0
 
     def render(self, camera, uniforms={}):
         super().render(camera, uniforms=uniforms)
@@ -407,6 +443,9 @@ class Gun(VRItem):
             # camera-related uniforms already set inside super method
             uniforms['world_transform'] = prep_mat(self.transform * glm.translate(self.mag_offset))
             self.parts['mag'].vao.render(uniforms=uniforms)
+        if 'rack' in self.parts:
+            uniforms['world_transform'] = prep_mat(self.transform * glm.translate(self.rack_offset))
+            self.parts['rack'].vao.render(uniforms=uniforms)
 
     def handle_interaction_event(self, event_type, hand, point):
         super().handle_interaction_event(event_type, hand, point)
@@ -415,6 +454,8 @@ class Gun(VRItem):
             if (event_type == 'trigger') and (not hand.interacting):
                 self.mag_loaded = False
                 mag = Magazine(self, hand.pos)
+                mag.remaining_capacity = self.remaining_capacity
+                self.remaining_capacity = 0
                 mag.default_grip.grab(hand)
                 self.e['Demo'].items.append(mag)
                 self.e['Sounds'].play_from('release_mag', position=self.first_point('slot_reference'), volume=0.4)
@@ -425,6 +466,8 @@ class Gun(VRItem):
             angle = self.holding_rotation
 
             self.e['Sounds'].play_from('shoot', volume=1.0, position=muzzle_pos)
+            if self.remaining_capacity < self.low_ammo_threshold:
+                self.e['Sounds'].play_from('low_ammo', volume=1.0, position=muzzle_pos)
 
             self.e['Demo'].tracers.append(Tracer(self.e['Demo'].tracer_res, self.type, muzzle_pos, angle))
 
@@ -485,11 +528,42 @@ class Gun(VRItem):
             mag = Magazine(self)
             self.e['Demo'].items.append(mag)
             self.e['Sounds'].play_from('release_mag', position=self.first_point('slot_reference'), volume=0.4)
+            mag.remaining_capacity = self.remaining_capacity
+            self.remaining_capacity = 0
 
         if self.primary_grip and self.primary_grip.interacting and self.primary_grip.interacting.trigger.holding and (self.primary_grip == self.default_grip):
             if not self.cooldown:
-                self.fire()
-                self.cooldown = max(0, 1 / (self.rpm / 60) - residual_cooldown)
+                # only fire if a round is chambered
+                if self.chambered:
+                    self.chambered = False
+                    # load next round into chamber if available
+                    if self.remaining_capacity:
+                        self.remaining_capacity = max(0, self.remaining_capacity - 1)
+                        self.chambered = True
+                    self.fire()
+                    self.cooldown = max(0, 1 / (self.rpm / 60) - residual_cooldown)
+                elif self.primary_grip.interacting.trigger.pressed:
+                    self.e['Sounds'].play_from('no_ammo', volume=1.0, position=self.primary_grip.world_pos)
+
+        if self.rack_point and self.rack_point.interacting:
+            pull = segment_project_progress(self.rack_point.world_pos, self.rack_point.offsetted_world_pos(self.rack_vector), self.rack_point.input_pos)
+            if (pull == 1) and (not self.rack_progress_state):
+                self.rack_progress_state = 1
+                self.e['Sounds'].play_from('rack', position=self.rack_point.world_pos, volume=0.7)
+
+                self.chambered = False
+                if self.remaining_capacity:
+                    self.chambered = True
+                    self.remaining_capacity = max(0, self.remaining_capacity - 1)
+            if (pull < 0.8) and self.rack_progress_state:
+                self.rack_progress_state = 0
+            self.rack_offset = self.rack_vector * pull
+            self.rack_point.hand_override = self.rack_point.offsetted_world_pos(self.rack_offset)
+        else:
+            if self.rack_point.hand_override:
+                self.e['Sounds'].play_from('rack_close', position=self.rack_point.world_pos, volume=0.7)
+            self.rack_offset = glm.vec3(0)
+            self.rack_point.hand_override = None
 
 class Knife(VRItem):
     def __init__(self, base_obj, pos=None):
@@ -510,6 +584,8 @@ class Magazine(VRItem):
             # select dedicated magazine position from source weapon
             pos = src_weapon.transform * src_weapon.mag_offset
         super().__init__(src_weapon.parts['mag'], pos=pos)
+
+        self.remaining_capacity = src_weapon.capacity
 
         self.rotation = glm.quat(src_weapon.holding_rotation)
 
@@ -540,6 +616,7 @@ class Magazine(VRItem):
                     if glm.length(gun.first_point('slot_reference') - self.first_point('slot_reference')) < gun.reload_range:
                         if self.held_outside_load_range:
                             gun.mag_loaded = True
+                            gun.remaining_capacity = self.remaining_capacity
                             self.primary_grip.interacting.vibrate(amplitude=1.0)
                             self.e['Sounds'].play_from('load', position=self.first_point('slot_reference'), volume=0.6)
                             # unlink mag from hand
@@ -553,7 +630,7 @@ class Magazine(VRItem):
 
 class M4(Gun):
     def __init__(self, base_obj, pos=None):
-        super().__init__(base_obj, pos=pos, parts={'mag': elems['Demo'].m4_mag_res})
+        super().__init__(base_obj, pos=pos, parts={'mag': elems['Demo'].m4_mag_res, 'rack': elems['Demo'].m4_rack_res})
 
         self.mag_offset = glm.vec3(0, -7.5 / 16, 0.5 / 16)
 
@@ -561,6 +638,8 @@ class M4(Gun):
         self.weight = 1.25
 
         self.reload_range = 0.05
+        self.capacity = 30
+        self.remaining_capacity = self.capacity
 
         self.rpm = 800
 
@@ -573,6 +652,10 @@ class M4(Gun):
         self.add_point(VRItemPoint('magazine', self.mag_offset, radius=0.1))
 
         self.add_point(VRItemPoint('slot_reference', (0, self.mag_offset.y + 3 / 16, self.mag_offset.z)))
+
+        self.rack_point = VRItemPoint('trigger_interact', (0, 4.8 / 16, 13.8 / 16), radius=0.08)
+        self.add_point(self.rack_point)
+        self.rack_vector = glm.vec3(0.0, 0.0, 0.45)
 
     def update(self):
         super().update()

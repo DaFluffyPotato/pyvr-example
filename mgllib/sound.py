@@ -31,8 +31,14 @@ class Sounds(ElementSingleton):
     def set_audio_device(self, audio_device):
         openal.oalQuit()
         try:
-            openal.oalInit(audio_device.encode('utf-8'))
+            if audio_device:
+                openal.oalInit(audio_device.encode('utf-8'))
+            else:
+                openal.oalInit()
         except openal.ALError:
+            print('could not open requested audio device:', audio_device)
+            openal.oalInit()
+        except openal.alc.ALCError:
             print('could not open requested audio device:', audio_device)
             openal.oalInit()
 

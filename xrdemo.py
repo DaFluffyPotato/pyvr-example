@@ -78,6 +78,7 @@ class Demo(ElementSingleton):
         self.knife_res = OBJ('data/models/knife/knife.obj', self.main_shader, centered=False)
         self.m4_res = OBJ('data/models/m4/m4.obj', self.main_shader, centered=False)
         self.m4_mag_res = OBJ('data/models/m4/mag.obj', self.main_shader, centered=False)
+        self.m4_rack_res = OBJ('data/models/m4/rack.obj', self.main_shader, centered=False)
 
         self.tracer_res = OBJ('data/models/tracer/tracer.obj', self.tracer_shader, centered=False, simple=True)
 
@@ -132,7 +133,7 @@ class Demo(ElementSingleton):
         self.world.rebuild_decor()
 
         self.hand_entity = self.hand_obj.new_entity()
-        self.hand_entity.transform.scale = [0.06, 0.06, 0.06]
+        self.hand_entity.transform.scale = [0.045, 0.045, 0.045]
 
         self.e['XRCamera'].light_pos = [0.5, 1, 1]
 
@@ -190,7 +191,9 @@ class Demo(ElementSingleton):
 
         for i, hand in enumerate(self.player.hands):
             self.hand_entity.transform.quaternion = glm.quat(hand.aim_rot[3], *(hand.aim_rot[:3])) * glm.quat(glm.rotate(math.pi / 2, glm.vec3(0, 1, 0)))
-            if hand.interacting and (hand.interacting.parent.alt_grip == hand.interacting):
+            if hand.interacting and hand.interacting.hand_override:
+                self.hand_entity.transform.pos = hand.interacting.hand_override
+            elif hand.interacting and (hand.interacting.parent.alt_grip == hand.interacting):
                 self.hand_entity.transform.pos = hand.interacting.world_pos
             else:    
                 self.hand_entity.transform.pos = list(hand.pos)
