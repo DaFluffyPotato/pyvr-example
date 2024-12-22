@@ -80,6 +80,8 @@ class Demo(ElementSingleton):
         self.m4_mag_res = OBJ('data/models/m4/mag.obj', self.main_shader, centered=False)
         self.m4_rack_res = OBJ('data/models/m4/rack.obj', self.main_shader, centered=False)
 
+        self.casing_res = OBJ('data/models/casing/casing.obj', self.main_shader, centered=False)
+
         self.tracer_res = OBJ('data/models/tracer/tracer.obj', self.tracer_shader, centered=False, simple=True)
 
         self.spark_res = Polygon(TETRAHEDRON, self.mgl.program('data/shaders/polygon.vert', 'data/shaders/polygon.frag'))

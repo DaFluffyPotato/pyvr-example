@@ -1,4 +1,5 @@
 import math
+import random
 
 import glm
 
@@ -181,6 +182,10 @@ class VRItem(Element):
 
         self.bounce = 0
         self.min_bounce = 0.2
+        self.bounce_sound = None
+        self.bounce_vol_scale = 1.0
+
+        self.floor_rot_reset = True
 
         # simple grab makes it so that grabbing an unheld object within the radius of the origin binds the hand to the default grip point
         self.simple_grab = 0
@@ -239,14 +244,20 @@ class VRItem(Element):
 
         self.calculate_transform()
 
-    def velocity_reset(self):
-        self.rotation = glm.quat()
+    def velocity_reset(self, rot=True):
+        if rot:
+            self.rotation = glm.quat()
+        else:
+            # the soft rotation reset just keeps the y axis rotation
+            # not the best solution, but it works
+            forward = self.rotation * glm.vec3(0, 0, -1)
+            self.rotation = glm.quat(glm.rotate(math.atan2(forward.x, forward.z) + math.pi, glm.vec3(0, 1, 0)))
         self.spin = glm.quat()
         self.velocity = glm.vec3(0.0, 0.0, 0.0)
         self.angular_velocity = glm.quat()
 
     def floor_reset(self):
-        self.velocity_reset()
+        self.velocity_reset(rot=self.floor_rot_reset)
 
         if self.floor_item:
             self.floor_mode = True
@@ -256,12 +267,14 @@ class VRItem(Element):
 
         self.pos.x += movement.x
         block = self.e['World'].check_block(self.pos)
+        bounced = 0
         if block:
             cuboid = CornerCuboid(block.scaled_world_pos, (block.scale, block.scale, block.scale))
             if movement.x > 0:
                 self.pos.x = cuboid.left - PHYSICS_EPSILON
                 if bounce and (self.velocity.x > self.min_bounce):
                     self.velocity *= self.bounce
+                    bounced = max(bounced, abs(self.velocity.x))
                     quat_scale(self.angular_velocity, self.bounce)
                     self.velocity.x *= -1
                 else:
@@ -270,6 +283,7 @@ class VRItem(Element):
                 self.pos.x = cuboid.right + PHYSICS_EPSILON
                 if bounce and (self.velocity.x < -self.min_bounce):
                     self.velocity *= self.bounce
+                    bounced = max(bounced, abs(self.velocity.x))
                     quat_scale(self.angular_velocity, self.bounce)
                     self.velocity.x *= -1
                 else:
@@ -283,6 +297,7 @@ class VRItem(Element):
                 self.pos.y = cuboid.bottom - PHYSICS_EPSILON
                 if bounce and (self.velocity.y > self.min_bounce):
                     self.velocity *= self.bounce
+                    bounced = max(bounced, abs(self.velocity.y))
                     quat_scale(self.angular_velocity, self.bounce)
                     self.velocity.y *= -1
                 else:
@@ -291,6 +306,7 @@ class VRItem(Element):
                 self.pos.y = cuboid.top + PHYSICS_EPSILON
                 if bounce and (self.velocity.y < -self.min_bounce):
                     self.velocity *= self.bounce
+                    bounced = max(bounced, abs(self.velocity.y))
                     quat_scale(self.angular_velocity, self.bounce)
                     self.velocity.y *= -1
                 else:
@@ -304,6 +320,7 @@ class VRItem(Element):
                 self.pos.z = cuboid.back - PHYSICS_EPSILON
                 if bounce and (self.velocity.z > self.min_bounce):
                     self.velocity *= self.bounce
+                    bounced = max(bounced, abs(self.velocity.z))
                     quat_scale(self.angular_velocity, self.bounce)
                     self.velocity.z *= -1
                 else:
@@ -312,10 +329,15 @@ class VRItem(Element):
                 self.pos.z = cuboid.front + PHYSICS_EPSILON
                 if bounce and (self.velocity.z < -self.min_bounce):
                     self.velocity *= self.bounce
+                    bounced = max(bounced, abs(self.velocity.z))
                     quat_scale(self.angular_velocity, self.bounce)
                     self.velocity.z *= -1
                 else:
                     self.floor_reset()
+        
+        if bounced and self.bounce_sound:
+            vol = min(bounced / 10, 1) * self.bounce_vol_scale
+            self.e['Sounds'].play_from(self.bounce_sound, volume=vol, position=self.pos)
 
     def place(self, pos):
         self.pos = glm.vec3(pos)
@@ -436,6 +458,8 @@ class Gun(VRItem):
         self.rack_point = None
         self.rack_vector = glm.vec3(0.0, 0.0, -1.0)
         self.rack_progress_state = 0
+        self.chamber_offset = glm.vec3(0.0, 0.0, 0.0)
+        self.casing_velocity = glm.vec3(0.0, 0.0, 0.0)
 
     def render(self, camera, uniforms={}):
         super().render(camera, uniforms=uniforms)
@@ -470,6 +494,7 @@ class Gun(VRItem):
                 self.e['Sounds'].play_from('low_ammo', volume=1.0, position=muzzle_pos)
 
             self.e['Demo'].tracers.append(Tracer(self.e['Demo'].tracer_res, self.type, muzzle_pos, angle))
+            self.e['Demo'].items.append(Casing(self))
 
             pattern = RECOIL_PATTERNS[self.recoil_pattern]
             if len(pattern['start']) <= self.spray_index:
@@ -550,6 +575,9 @@ class Gun(VRItem):
             if (pull == 1) and (not self.rack_progress_state):
                 self.rack_progress_state = 1
                 self.e['Sounds'].play_from('rack', position=self.rack_point.world_pos, volume=0.7)
+
+                if self.chambered:
+                    self.e['Demo'].items.append(Casing(self))
 
                 self.chambered = False
                 if self.remaining_capacity:
@@ -634,7 +662,7 @@ class M4(Gun):
 
         self.mag_offset = glm.vec3(0, -7.5 / 16, 0.5 / 16)
 
-        self.scale = glm.vec3(0.23, 0.23, 0.23)
+        self.scale = glm.vec3(0.19, 0.19, 0.19)
         self.weight = 1.25
 
         self.reload_range = 0.05
@@ -657,5 +685,41 @@ class M4(Gun):
         self.add_point(self.rack_point)
         self.rack_vector = glm.vec3(0.0, 0.0, 0.45)
 
+        self.chamber_offset = glm.vec3(0.0, 2.9 / 16, 0.0)
+        self.casing_velocity = glm.vec3(1.0, 0.3, 1.0)
+
     def update(self):
         super().update()
+
+class Casing(VRItem):
+    def __init__(self, src_weapon, pos=None):
+        super().__init__(elems['Demo'].casing_res, pos=pos)
+
+        self.scale = glm.vec3(0.07)
+
+        self.life = 5
+
+        self.src_weapon = src_weapon
+        if not pos:
+            self.rotation = self.src_weapon.holding_rotation
+            self.pos = self.src_weapon.transform * self.src_weapon.chamber_offset
+            initial_velocity = self.src_weapon.casing_velocity
+            initial_velocity.x *= (random.random() + 3.5) / 4
+            initial_velocity.y *= (random.random() + 3.5) / 4
+            initial_velocity.z *= (random.random() + 3.5) / 4
+            self.velocity = glm.mat4(self.src_weapon.holding_rotation) * initial_velocity
+
+        self.bounce_sound = 'casing_bounce'
+        self.bounce_vol_scale = 0.5
+        self.bounce = 0.5
+        self.floor_rot_reset = False
+
+        self.calculate_transform()
+
+    def update(self):
+        super().update()
+
+        self.life = max(0, self.life - self.e['XRWindow'].dt)
+
+        if not self.life:
+            return True
