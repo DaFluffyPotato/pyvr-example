@@ -382,6 +382,10 @@ class VRItem(Element):
         else:
             self.transform = glm.translate(self.pos) * glm.mat4(self.spin) * glm.mat4(self.rotation) * scale_mat
 
+    def lookat(self, target):
+        self.rotation = glm.quat(glm.inverse(glm.lookAt(glm.vec3(0), target - self.pos, glm.vec3(0.0, 1.0, 0.0))))
+        self.holding_rotation = self.rotation
+
     def handle_interaction_event(self, event_type, hand, point):
         pass
 
@@ -437,6 +441,7 @@ class Gun(VRItem):
 
         self.rpm = 600
         self.cooldown = 0
+        self.residual_cooldown = 0
 
         self.capacity = 10
         self.remaining_capacity = self.capacity
@@ -539,12 +544,32 @@ class Gun(VRItem):
             
         self.spray_control_force += dt * self.spray_control_force_scale
 
+    def force_reload(self):
+        self.remaining_capacity = self.capacity
+        self.chambered = True
+
+    def attempt_fire(self):
+        if not self.cooldown:
+            # only fire if a round is chambered
+            if self.chambered:
+                self.chambered = False
+                # load next round into chamber if available
+                if self.remaining_capacity:
+                    self.remaining_capacity = max(0, self.remaining_capacity - 1)
+                    self.chambered = True
+                self.fire()
+                self.cooldown = max(0, 1 / (self.rpm / 60) - self.residual_cooldown)
+                return True
+            
+    def core_update(self):
+        dt = self.e['XRWindow'].dt
+        self.residual_cooldown = max(0, dt - self.cooldown) if self.cooldown else 0
+        self.cooldown = max(0, self.cooldown - dt)
+
     def update(self):
         super().update()
 
-        dt = self.e['XRWindow'].dt
-        residual_cooldown = max(0, dt - self.cooldown) if self.cooldown else 0
-        self.cooldown = max(0, self.cooldown - dt)
+        self.core_update()
 
         self.handle_recoil()
 
@@ -557,17 +582,9 @@ class Gun(VRItem):
             self.remaining_capacity = 0
 
         if self.primary_grip and self.primary_grip.interacting and self.primary_grip.interacting.trigger.holding and (self.primary_grip == self.default_grip):
-            if not self.cooldown:
-                # only fire if a round is chambered
-                if self.chambered:
-                    self.chambered = False
-                    # load next round into chamber if available
-                    if self.remaining_capacity:
-                        self.remaining_capacity = max(0, self.remaining_capacity - 1)
-                        self.chambered = True
-                    self.fire()
-                    self.cooldown = max(0, 1 / (self.rpm / 60) - residual_cooldown)
-                elif self.primary_grip.interacting.trigger.pressed:
+            fired = self.attempt_fire()
+            if (not fired) and (not self.chambered) and (not self.cooldown):
+                if self.primary_grip.interacting.trigger.pressed:
                     self.e['Sounds'].play_from('no_ammo', volume=1.0, position=self.primary_grip.world_pos)
 
         if self.rack_point and self.rack_point.interacting:

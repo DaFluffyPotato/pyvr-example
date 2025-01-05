@@ -97,6 +97,8 @@ class PlayerBody(ElementSingleton):
         self.xz_angle_slacked = 0
 
         self.inventory = {'left_hip_mag': InventorySlot(), 'right_hip_mag': InventorySlot()}
+
+        self.height = 2
     
     def move(self, movement):
         blockers = [CornerCuboid(block.scaled_world_pos, (block.scale, block.scale, block.scale)) for block in self.e['World'].nearby_blocks(self.cuboid.origin, radii=(1, 3, 1))]
@@ -167,6 +169,9 @@ class PlayerBody(ElementSingleton):
 
         self.left_hand.transform(self.world_pos)
         self.right_hand.transform(self.world_pos)
+
+        # average distance from eyes to top of head is ~15cm
+        self.height = self.e['XRInput'].raw_head_pos[1] + 0.15
 
         self.inventory['left_hip_mag'].origin = glm.vec3(-0.25, self.e['XRInput'].raw_head_pos[1] * 0.54, 0)
         self.inventory['right_hip_mag'].origin = glm.vec3(0.25, self.e['XRInput'].raw_head_pos[1] * 0.54, 0)

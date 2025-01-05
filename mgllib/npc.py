@@ -11,6 +11,8 @@ from .shapes.sphere import Sphere
 from .shapes.cylinder import FloorCylinder
 from .const import BULLET_STATS
 from .spark import Spark
+from .vritem import M4
+from .util import angle_diff
 
 class NPCPart(Element):
     def __init__(self, parent, model, part_type):
@@ -34,13 +36,97 @@ class NPCPart(Element):
         else:
             self.transform = glm.mat4()
 
-class NPC(Element):
-    def __init__(self, pos):
+class NPCAI(Element):
+    def __init__(self, parent):
         super().__init__()
+
+        self.parent = parent
+
+        self.local_weapon_offset = glm.vec3(0.22, 0.0, -0.55)
+        self.global_weapon_offset = glm.vec3(0.0, 1.4, 0.0)
+        self.weapon = M4(self.e['Demo'].m4_res, glm.vec3(self.parent.pos))
+
+        self.targeting = None
+        self.target_timer = 0
+        self.target_duration = 0
+        self.attack_cooldown = 0
+
+    def calculate_weapon_pos(self):
+        return (self.parent.rotation * self.local_weapon_offset) + self.global_weapon_offset + self.parent.pos
+    
+    def alert_rate(self, pos):
+        offset = pos - self.parent.pos
+        angle = math.atan2(offset.x, offset.z) + math.pi
+        in_visible_angle = angle_diff(angle, self.parent.last_xz_angle) < math.pi / 3
+        visible_range = 5
+        if in_visible_angle:
+            visible_range = 15
+        if glm.length(offset) < visible_range:
+            return 1
+        return 0
+
+    def update(self):
+        if self.weapon:
+            self.weapon.core_update()
+
+            player = self.e['Demo'].player
+            alert_rate = self.alert_rate(glm.vec3(player.world_pos.pos))
+            if not self.targeting:
+                if alert_rate:
+                    self.target_timer += alert_rate * self.e['XRWindow'].dt
+                    if self.target_timer > 1.7:
+                        self.targeting = player
+                else:
+                    self.target_timer = 0
+                    self.targeting = None
+            elif not alert_rate:
+                self.target_timer = 0
+                self.targeting = None
+
+            if self.targeting:
+                target_coord = glm.vec3(self.targeting.world_pos.pos) + glm.vec3(0.0, self.targeting.height * 0.7, 0.0)
+                target_offset = target_coord - self.parent.pos
+            else:
+                # aim forward if the player isn't nearby
+                target_coord = self.global_weapon_offset + (self.parent.rotation * glm.vec3(0.0, 0.0, -15.0)) + self.parent.pos
+                target_offset = target_coord - self.parent.pos
+
+            self.parent.last_xz_angle = math.atan2(target_offset.x, target_offset.z) + math.pi
+            self.parent.rotation = glm.quat(glm.rotate(self.parent.last_xz_angle, (0, 1, 0)))
+
+            self.weapon.pos = self.calculate_weapon_pos()
+            self.weapon.lookat(target_coord)
+            self.weapon.calculate_transform()
+
+            if self.targeting:
+                self.attack_cooldown = max(0, self.attack_cooldown - self.e['XRWindow'].dt)
+                self.target_duration += self.e['XRWindow'].dt
+                if (self.target_duration > 0.5) and (self.attack_cooldown <= 0):
+                    self.weapon.force_reload()
+                    if self.weapon.attempt_fire():
+                        if random.random() < 0.25:
+                            self.attack_cooldown = random.random() * 0.75 + 0.5
+            else:
+                self.target_duration = 0
+
+    def render(self, camera, uniforms={}):
+        if self.weapon:
+            self.weapon.render(camera, uniforms=uniforms)
+
+class NPC(Element):
+    def __init__(self, pos, mode='ai'):
+        super().__init__()
+
+        self.mode = mode
 
         self.scale = glm.vec3(1.0, 1.0, 1.0)
         self.pos = glm.vec3(pos) if pos else glm.vec3(0.0, 0.0, 0.0)
-        self.rotation = glm.quat(glm.rotate(random.random() * math.pi * 2, (0, 1, 0)))
+        self.last_xz_angle = random.random() * math.pi * 2
+        self.rotation = glm.quat(glm.rotate(self.last_xz_angle, (0, 1, 0)))
+
+        self.brain = None
+        if mode == 'ai':
+            self.brain = NPCAI(self)
 
         self.killed = 0
         self.helmeted = True
@@ -112,6 +198,9 @@ class NPC(Element):
 
     def update(self):
         if not self.killed:
+            if self.brain:
+                self.brain.update()
+
             movement_vec = glm.vec3(0, 0, 0)
 
             self.velocity.y = max(-self.terminal_velocity, self.velocity.y - self.gravity * self.e['XRWindow'].dt)
@@ -157,3 +246,6 @@ class NPC(Element):
         for part in self.parts:
             uniforms['world_transform'] = prep_mat(self.transform * part.transform)
             part.model.vao.render(uniforms=uniforms)
+
+        if not self.killed:
+            self.brain.render(camera, uniforms=uniforms)
