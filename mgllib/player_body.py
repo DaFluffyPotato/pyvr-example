@@ -99,6 +99,8 @@ class PlayerBody(ElementSingleton):
         self.inventory = {'left_hip_mag': InventorySlot(), 'right_hip_mag': InventorySlot()}
 
         self.height = 2
+        
+        self.pathing_pos = None
     
     def move(self, movement):
         blockers = [CornerCuboid(block.scaled_world_pos, (block.scale, block.scale, block.scale)) for block in self.e['World'].nearby_blocks(self.cuboid.origin, radii=(1, 3, 1))]
@@ -157,6 +159,8 @@ class PlayerBody(ElementSingleton):
         self.world_movement = self.world_pos.rotation_matrix * movement_vec
 
         self.move(list(self.world_movement))
+
+        self.pathing_pos = self.e['World'].find_valid_path_destination(self.e['World'].world_to_block(self.world_pos.pos))
 
         if self.last_collisions['bottom']:
             self.velocity.y = 0

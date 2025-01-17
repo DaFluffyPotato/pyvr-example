@@ -61,18 +61,20 @@ class Sounds(ElementSingleton):
     
     def play(self, sound, volume=1.0):
         source = self.make_source(sound)
-        source.set_gain(volume)
-        source.local = True
-        source.set_position(self.listener.position)
-        source.play()
+        if source:
+            source.set_gain(volume)
+            source.local = True
+            source.set_position(self.listener.position)
+            source.play()
 
     def play_from(self, sound, volume=1.0, position=glm.vec3(0.0)):
         position = position * SOUND_DISTANCE_SCALE
         source = self.make_source(sound)
-        source.set_gain(volume)
-        source.set_position(tuple(position))
-        source.local = False
-        source.play()
+        if source:
+            source.set_gain(volume)
+            source.set_position(tuple(position))
+            source.local = False
+            source.play()
 
     def place_listener(self, pos, orientation):
         new_pos = tuple(pos * SOUND_DISTANCE_SCALE)

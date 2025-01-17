@@ -106,8 +106,9 @@ class Demo(ElementSingleton):
                     t = 'dirt'
                     if y == height - 1:
                         t = 'grass'
-                        if random.random() < 0.003:
-                            monuments.append((x - 64, y - 5, z - 64))
+                        if (abs(x) + abs(z)) > 8:
+                            if random.random() < 0.003:
+                                monuments.append((x - 64, y - 5, z - 64))
                     self.world.add_block(t, (x - 64, y - 6, z - 64), rebuild=False)
 
         for monument in monuments:
@@ -133,6 +134,7 @@ class Demo(ElementSingleton):
 
         self.world.rebuild()
         self.world.rebuild_decor()
+        self.world.gen_navmesh((0, 0, 0))
 
         self.hand_entity = self.hand_obj.new_entity()
         self.hand_entity.transform.scale = [0.045, 0.045, 0.045]
@@ -168,8 +170,11 @@ class Demo(ElementSingleton):
             if kill:
                 self.npcs.remove(npc)
 
-        while len(self.npcs) < 10:
-            self.npcs.append(NPC((random.randint(-40, 40), 10, random.randint(-40, 40))))
+        while len(self.npcs) < 5:
+            spawn_pos = (random.randint(-40, 40), 10, random.randint(-40, 40))
+            player_dis = glm.length(glm.vec3(self.player.world_pos.pos) - glm.vec3(spawn_pos))
+            if player_dis > 15:
+                self.npcs.append(NPC(spawn_pos))
 
     def update(self, view_index):
         if view_index == 0:

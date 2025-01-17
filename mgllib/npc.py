@@ -1,11 +1,12 @@
 import math
 import random
+import threading
 
 import glm
 
 from .elements import Element
 from .mat3d import prep_mat
-from .world.const import BLOCK_SCALE
+from .world.const import BLOCK_SCALE, MaxDepthReached
 from .shapes.cuboid import FloorCuboid, CornerCuboid, NO_COLLISIONS
 from .shapes.sphere import Sphere
 from .shapes.cylinder import FloorCylinder
@@ -51,6 +52,13 @@ class NPCAI(Element):
         self.target_duration = 0
         self.attack_cooldown = 0
 
+        self.movement_target_blocks = None
+        self.current_path = []
+        self.movement_angle = 0
+
+        self.pathing_delay = random.random() * 10
+        self.generating_path = False
+
     def calculate_weapon_pos(self):
         return (self.parent.rotation * self.local_weapon_offset) + self.global_weapon_offset + self.parent.pos
     
@@ -64,10 +72,26 @@ class NPCAI(Element):
         if glm.length(offset) < visible_range:
             return 1
         return 0
+    
+    def gen_path(self, start, end):
+        try:
+            self.current_path = self.e['World'].pathfinder.astar(start, end)
+            if not self.current_path:
+                self.current_path = []
+            else:
+                self.current_path = [start] + list(self.current_path)
+        except MaxDepthReached:
+            # it took over 200 steps with no path found
+            self.current_path = []
+        self.movement_target_blocks = (start, end)
+        self.generating_path = False
 
     def update(self):
+        movement = glm.vec3(0)
         if self.weapon:
             self.weapon.core_update()
+
+            self.pathing_delay = max(0, self.pathing_delay - self.e['XRWindow'].dt)
 
             player = self.e['Demo'].player
             alert_rate = self.alert_rate(glm.vec3(player.world_pos.pos))
@@ -87,8 +111,34 @@ class NPCAI(Element):
                 target_coord = glm.vec3(self.targeting.world_pos.pos) + glm.vec3(0.0, self.targeting.height * 0.7, 0.0)
                 target_offset = target_coord - self.parent.pos
             else:
-                # aim forward if the player isn't nearby
-                target_coord = self.global_weapon_offset + (self.parent.rotation * glm.vec3(0.0, 0.0, -15.0)) + self.parent.pos
+                player_block = player.pathing_pos
+                bp = self.parent.pathing_pos
+                if player_block and bp and (not self.pathing_delay):
+                    if (bp, player_block) != self.movement_target_blocks:
+                        if not self.generating_path:
+                            self.generating_path = True
+                            threading.Thread(target=self.gen_path, args=(bp, player_block)).start()
+                
+                path_angle = None
+                if len(self.current_path) and bp:
+                    if self.current_path[0] == bp:
+                        self.current_path.pop(0)
+                    if len(self.current_path):
+                        path_offset = glm.vec3(self.current_path[0]) * BLOCK_SCALE + glm.vec3(BLOCK_SCALE * 0.5) - self.parent.pos
+                        if self.current_path[0][1] > bp[1]:
+                            self.parent.jump()
+                        path_angle = math.atan2(path_offset.x, path_offset.z)
+                        ad = angle_diff(path_angle, self.movement_angle)
+                        self.movement_angle += max(-self.e['XRWindow'].dt * 2, min(self.e['XRWindow'].dt * 2, ad))
+                        movement.x = math.sin(self.movement_angle)
+                        movement.z = math.cos(self.movement_angle)
+
+                if path_angle != None:
+                    # aim along pathfinding path if the player is not close enough
+                    target_coord = self.global_weapon_offset + movement * 15 + self.parent.pos
+                else:
+                    # default to forward if there is no path movement
+                    target_coord = self.global_weapon_offset + (self.parent.rotation * glm.vec3(0.0, 0.0, -15.0)) + self.parent.pos
                 target_offset = target_coord - self.parent.pos
 
             self.parent.last_xz_angle = math.atan2(target_offset.x, target_offset.z) + math.pi
@@ -108,6 +158,8 @@ class NPCAI(Element):
                             self.attack_cooldown = random.random() * 0.75 + 0.5
             else:
                 self.target_duration = 0
+            
+        return movement
 
     def render(self, camera, uniforms={}):
         if self.weapon:
@@ -148,6 +200,16 @@ class NPC(Element):
         self.gravity = 9.81 # m/s^2
         self.velocity = glm.vec3(0.0, 0.0, 0.0)
         self.terminal_velocity = 19
+        self.jump_force = 4.25
+        self.air_time = 0
+        self.movement_speed = 2.5
+
+        self.pathing_pos = None
+
+    def jump(self):
+        if self.air_time < 0.25:
+            self.velocity.y = self.jump_force
+            self.air_time = 1
 
     def hit_check(self, point):
         if not self.killed:
@@ -198,8 +260,9 @@ class NPC(Element):
 
     def update(self):
         if not self.killed:
+            brain_movement = glm.vec3(0)
             if self.brain:
-                self.brain.update()
+                brain_movement = self.brain.update()
 
             movement_vec = glm.vec3(0, 0, 0)
 
@@ -208,11 +271,17 @@ class NPC(Element):
             movement_vec.x += self.velocity.x * self.e['XRWindow'].dt
             movement_vec.y += self.velocity.y * self.e['XRWindow'].dt
             movement_vec.z += self.velocity.z * self.e['XRWindow'].dt
+            movement_vec += brain_movement * self.movement_speed * self.e['XRWindow'].dt
 
             self.move(list(movement_vec))
 
+            self.pathing_pos = self.e['World'].find_valid_path_destination(self.e['World'].world_to_block(self.pos))
+
             if self.last_collisions['bottom']:
                 self.velocity.y = 0
+                self.air_time = 0
+            else:
+                self.air_time += self.e['XRWindow'].dt
 
             if self.last_collisions['top']:
                 self.velocity.y = 0
