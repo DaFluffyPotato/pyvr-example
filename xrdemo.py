@@ -23,6 +23,7 @@ from mgllib.model.polygon import Polygon, TETRAHEDRON
 from mgllib.npc import NPC
 from mgllib.sound import Sounds
 from mgllib.entity import Entity
+from mgllib.hud import HUD
 
 class Demo(ElementSingleton):
     def __init__(self):
@@ -72,6 +73,8 @@ class Demo(ElementSingleton):
         self.body_res = OBJ('data/models/body/body.obj', self.npc_shader)
 
         self.world = World(self.main_shader)
+
+        self.hud = HUD()
 
         self.skybox = Skybox('data/textures/skybox', self.mgl.program('data/shaders/skybox.vert', 'data/shaders/skybox.frag'))
 
@@ -147,6 +150,7 @@ class Demo(ElementSingleton):
         self.window.run()
 
     def single_update(self):
+        self.hud.update()
         self.player.cycle()
         for item in list(self.items):
             for hand in self.player.hands:
@@ -207,5 +211,7 @@ class Demo(ElementSingleton):
             self.hand_entity.render(self.e['XRCamera'])
 
         self.world.render(self.e['XRCamera'], decor_uniforms={'time': time.time() - self.start_time})
+
+        self.hud.render()
 
 Demo().run()

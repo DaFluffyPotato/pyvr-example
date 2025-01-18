@@ -6,10 +6,13 @@ import glm
 from .xrinput import Controller
 from .mat3d import Transform3D, quat_to_mat
 from .shapes.cuboid import FloorCuboid, CornerCuboid, NO_COLLISIONS
+from .shapes.sphere import Sphere
+from .shapes.cylinder import FloorCylinder
 from .world.const import BLOCK_SCALE
 from .elements import ElementSingleton, Element
 from .vritem import Magazine, Gun
 from .util import angle_pull_within
+from .const import BULLET_STATS
 
 '''
 Headset + Virtual Body Transform Model
@@ -99,13 +102,69 @@ class PlayerBody(ElementSingleton):
         self.inventory = {'left_hip_mag': InventorySlot(), 'right_hip_mag': InventorySlot()}
 
         self.height = 2
+        self.eye_height = 1.85
+
+        self.helmeted = True
+        self.max_health = 100
+        self.health = self.max_health
+        self.helmet_health = 1.0
         
         self.pathing_pos = None
+
+        self.calculate_hitboxes()
+
+    def calculate_hitboxes(self):
+        self.head_hitbox = Sphere(glm.vec3(self.world_pos.pos) + glm.vec3(0, self.eye_height, 0), 0.2)
+        self.body_hitbox = FloorCylinder(glm.vec3(self.world_pos.pos), self.eye_height - 0.15, 0.25)
     
     def move(self, movement):
         blockers = [CornerCuboid(block.scaled_world_pos, (block.scale, block.scale, block.scale)) for block in self.e['World'].nearby_blocks(self.cuboid.origin, radii=(1, 3, 1))]
         self.last_collisions = self.cuboid.move(movement, blockers)
         self.world_pos.pos = list(self.cuboid.origin)
+
+    def hit_check(self, point):
+        if self.health > 0:
+            if self.head_hitbox.collidepoint(point):
+                return 'head'
+            if self.body_hitbox.collidepoint(point):
+                return 'body'
+            
+    def kill(self):
+        for npc in self.e['Demo'].npcs:
+            npc.kill()
+
+        self.world_pos.pos = [0, 10, 0]
+        self.cuboid.origin = list(self.world_pos.pos)
+        self.health = self.max_health
+
+    def damage(self, bullet_type, part, bullet=None):
+        stats = BULLET_STATS[bullet_type]
+
+        sound_location = self.e['Sounds'].head_pos
+        if bullet:
+            sound_location = self.e['Sounds'].head_pos - glm.normalize(bullet.velocity)
+
+        if part == 'head':
+            if self.helmeted:
+                self.helmet_health -= stats['helmet_dmg']
+                if self.helmet_health <= 0:
+                    self.helmeted = False
+                self.health -= (self.health * 0.7 + self.max_health * 0.3) * stats['helmet_pen']
+                if self.health > 0:
+                    self.e['Sounds'].play_from('helmet', volume=0.7, position=sound_location)
+                else:
+                    self.e['Sounds'].play_from('headshot', position=sound_location)
+            else:
+                self.health = 0
+                self.e['Sounds'].play_from('headshot', position=sound_location)
+        else:
+            self.health -= stats['damage']
+            self.e['Sounds'].play_from('hurt', position=sound_location)
+
+        self.e['HUD'].flash()
+        
+        if self.health <= 0:
+            self.kill()
 
     @property
     def left_hand(self):
@@ -176,6 +235,9 @@ class PlayerBody(ElementSingleton):
 
         # average distance from eyes to top of head is ~15cm
         self.height = self.e['XRInput'].raw_head_pos[1] + 0.15
+        self.eye_height = self.e['XRInput'].raw_head_pos[1]
+
+        self.calculate_hitboxes()
 
         self.inventory['left_hip_mag'].origin = glm.vec3(-0.25, self.e['XRInput'].raw_head_pos[1] * 0.54, 0)
         self.inventory['right_hip_mag'].origin = glm.vec3(0.25, self.e['XRInput'].raw_head_pos[1] * 0.54, 0)

@@ -1,3 +1,4 @@
+import time
 import math
 import random
 import threading
@@ -57,6 +58,8 @@ class NPCAI(Element):
         self.movement_angle = 0
 
         self.pathing_delay = random.random() * 10
+        if time.time() - self.e['Demo'].start_time < 5:
+            self.pathing_delay += 16
         self.generating_path = False
 
     def calculate_weapon_pos(self):
@@ -75,11 +78,11 @@ class NPCAI(Element):
     
     def gen_path(self, start, end):
         try:
-            self.current_path = self.e['World'].pathfinder.astar(start, end)
-            if not self.current_path:
+            new_path = self.e['World'].pathfinder.astar(start, end)
+            if not new_path:
                 self.current_path = []
             else:
-                self.current_path = [start] + list(self.current_path)
+                self.current_path = [start] + list(new_path)
         except MaxDepthReached:
             # it took over 200 steps with no path found
             self.current_path = []
@@ -233,7 +236,7 @@ class NPC(Element):
                 self.body_fragment(self.head.hitbox.random_point())
             self.killed = 0.1
         
-    def damage(self, bullet_type, part):
+    def damage(self, bullet_type, part, bullet=None):
         stats = BULLET_STATS[bullet_type]
 
         if part == 'head':
@@ -242,7 +245,10 @@ class NPC(Element):
                 if self.helmet_health <= 0:
                     self.helmeted = False
                 self.health -= (self.health * 0.7 + self.max_health * 0.3) * stats['helmet_pen']
-                self.e['Sounds'].play('helmet', volume=0.7)
+                if self.health > 0:
+                    self.e['Sounds'].play('helmet', volume=0.7)
+                else:
+                    self.e['Sounds'].play('headshot')
             else:
                 self.health = 0
                 self.e['Sounds'].play('headshot')

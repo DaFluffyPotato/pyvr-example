@@ -39,10 +39,10 @@ class Tracer(Entity):
             self.e['Demo'].particles.append(Spark(self.e['Demo'].spark_res, self.pos, rotation, speed=5, spread=0.7, scale=(0.2, 0.05), decay=0.6, color=(1.0, 1.0, 1.0)))
 
     def physics_check(self):
-        for npc in self.e['Demo'].npcs:
+        for npc in self.e['Demo'].npcs + [self.e['Demo'].player]:
             hit = npc.hit_check(self.pos)
             if hit:
-                npc.damage(self.type, hit)
+                npc.damage(self.type, hit, bullet=self)
                 self.create_blood(6)
                 return True
             

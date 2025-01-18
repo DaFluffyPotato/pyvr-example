@@ -21,6 +21,8 @@ class Sounds(ElementSingleton):
 
         self.set_audio_device('OpenAL Soft on Headphones (Oculus Virtual Audio Device)')
 
+        self.head_pos = glm.vec3(0)
+
     def load_sounds(self):
         for sound in os.listdir(self.path):
             if sound.split('.')[-1] == 'ogg':
@@ -79,6 +81,8 @@ class Sounds(ElementSingleton):
     def place_listener(self, pos, orientation):
         new_pos = tuple(pos * SOUND_DISTANCE_SCALE)
         self.listener.move_to(new_pos)
+
+        self.head_pos = glm.vec3(pos)
 
         for source in self.sources:
             if source.local and (source.get_state() != openal.AL_STOPPED):
