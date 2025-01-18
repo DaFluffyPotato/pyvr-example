@@ -226,8 +226,11 @@ class NPC(Element):
         colors = [(1.0, 0.0, 0.267), (0.635, 0.149, 0.2), (0.149, 0.169, 0.267)]
         self.e['Demo'].particles.append(Spark(self.e['Demo'].spark_res, source, rotation, speed=1.5 + random.random() * 3, spread=0, scale=(0.15 + random.random() * 0.08, 0.15 + random.random() * 0.16), decay=0.35 + random.random() * 0.25, color=random.choice(colors), accel=glm.vec3(0, -self.gravity * (0.5 + random.random() * 0.5), 0), drag=3))
         
-    def kill(self):
+    def kill(self, score=True):
         if not self.killed:
+            if score:
+                self.e['Demo'].score += 1
+                
             self.e['Sounds'].play('kill_confirmed', volume=0.5)
 
             for i in range(30):

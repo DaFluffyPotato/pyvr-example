@@ -11,6 +11,7 @@ from .shapes.cylinder import FloorCylinder
 from .world.const import BLOCK_SCALE
 from .elements import ElementSingleton, Element
 from .vritem import Magazine, Gun
+from .watch import Watch
 from .util import angle_pull_within
 from .const import BULLET_STATS
 
@@ -108,6 +109,7 @@ class PlayerBody(ElementSingleton):
         self.max_health = 100
         self.health = self.max_health
         self.helmet_health = 1.0
+        self.watch = Watch(self)
         
         self.pathing_pos = None
 
@@ -131,11 +133,12 @@ class PlayerBody(ElementSingleton):
             
     def kill(self):
         for npc in self.e['Demo'].npcs:
-            npc.kill()
+            npc.kill(score=False)
 
         self.world_pos.pos = [0, 10, 0]
         self.cuboid.origin = list(self.world_pos.pos)
         self.health = self.max_health
+        self.e['Demo'].score = 0
 
     def damage(self, bullet_type, part, bullet=None):
         stats = BULLET_STATS[bullet_type]
@@ -274,3 +277,9 @@ class PlayerBody(ElementSingleton):
         self.e['XRCamera'].world_matrix = np.linalg.inv(self.world_pos.npmatrix)
 
         self.e['Sounds'].place_listener(glm.vec3(self.world_pos.pos) + glm.vec3(0, self.e['XRInput'].raw_head_pos[1], 0), self.world_pos.rotation_matrix * glm.mat4(self.e['XRInput'].raw_head_orientation))
+
+    def late_cycle(self):
+        self.watch.update()
+
+    def render(self, camera):
+        self.watch.render(camera)

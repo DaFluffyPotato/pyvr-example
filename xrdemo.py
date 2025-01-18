@@ -35,6 +35,10 @@ class Demo(ElementSingleton):
 
         self.start_time = time.time()
 
+        pygame.init()
+
+        self.font = pygame.font.Font('data/rubik_medium.ttf', size=28)
+
     def place_monument(self, pos):
         for y in range(5):
             self.world.add_block('chiseled_stone', (1 + pos[0], y + pos[1] - 1, 1 + pos[2]), rebuild=False)
@@ -65,8 +69,11 @@ class Demo(ElementSingleton):
         self.tree_shader = self.mgl.program('data/shaders/tree.vert', 'data/shaders/default.frag')
         self.npc_shader = self.mgl.program('data/shaders/npc.vert', 'data/shaders/npc.frag')
         self.tracer_shader = self.mgl.program('data/shaders/default.vert', 'data/shaders/tracer.frag')
+        self.no_norm_shader = self.mgl.program('data/shaders/no_norm.vert', 'data/shaders/no_norm.frag')
 
         self.hand_obj = OBJ('data/models/hand/hand.obj', self.main_shader, centered=True)
+
+        self.watch_obj = OBJ('data/models/watch/watch.obj', self.main_shader)
 
         self.helmet_res = OBJ('data/models/helmet/helmet.obj', self.main_shader)
         self.head_res = OBJ('data/models/head/head.obj', self.npc_shader)
@@ -92,9 +99,9 @@ class Demo(ElementSingleton):
         self.grass_res = OBJ('data/models/grass/grass.obj', self.grass_shader, centered=False, save_geometry=True, no_build=True)
         self.tree_res = OBJ('data/models/tree/tree.obj', self.tree_shader, centered=False, save_geometry=True, no_build=True)
         
-        self.items = [Knife(self.knife_res, (0, 1, i - 5)) for i in range(10)]
+        self.items = [M4(self.m4_res, (0, 1, i - 5)) for i in range(10)]
         for i in range(3):
-            self.items.append(M4(self.m4_res, (7, 1, i - 1)))
+            self.items.append(Knife(self.knife_res, (7, 1, i - 1)))
 
         self.npcs = []
 
@@ -146,6 +153,12 @@ class Demo(ElementSingleton):
 
         self.player = PlayerBody()
 
+        self.score = 0
+    
+    @property
+    def watch_text(self):
+        return str(self.score)
+
     def run(self):
         self.window.run()
 
@@ -176,9 +189,11 @@ class Demo(ElementSingleton):
 
         while len(self.npcs) < 5:
             spawn_pos = (random.randint(-40, 40), 10, random.randint(-40, 40))
-            player_dis = glm.length(glm.vec3(self.player.world_pos.pos) - glm.vec3(spawn_pos))
+            player_dis = glm.length(glm.vec3(self.player.world_pos.pos).xz - glm.vec3(spawn_pos).xz)
             if player_dis > 15:
                 self.npcs.append(NPC(spawn_pos))
+        
+        self.player.late_cycle()
 
     def update(self, view_index):
         if view_index == 0:
@@ -209,6 +224,8 @@ class Demo(ElementSingleton):
             else:    
                 self.hand_entity.transform.pos = list(hand.pos)
             self.hand_entity.render(self.e['XRCamera'])
+
+        self.player.render(self.e['XRCamera'])
 
         self.world.render(self.e['XRCamera'], decor_uniforms={'time': time.time() - self.start_time})
 

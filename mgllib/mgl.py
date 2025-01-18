@@ -35,3 +35,12 @@ class MGL(ElementSingleton):
     def tx2pg(self, tex):
         surf = pygame.image.frombytes(tex.read(), tex.size, 'RGBA', True)
         return surf
+    
+    def pg2tx(self, surf, swizzle=True):
+        channels = 4
+        new_tex = self.ctx.texture(surf.get_size(), channels)
+        new_tex.filter = (moderngl.NEAREST, moderngl.NEAREST)
+        if swizzle:
+            new_tex.swizzle = 'BGRA'
+        new_tex.write(surf.get_view('1'))
+        return new_tex
