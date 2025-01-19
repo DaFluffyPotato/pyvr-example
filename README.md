@@ -23,3 +23,5 @@ I'll be working more with other headsets soon, so I may update this README as I 
 Some interactions are restricted to the applicable hand depending on how an item is held. All grabs need to be held continuously. Some games implement grabbing as a toggle; this is not one of them.
 
 Health and kills (on your current life) are shown on the watch face. Extra mags for your current weapon are at your hips.
+
+**The PyOpenXR version listed in the requirements.txt is incorrect! There's a memory leak in the latest release available on PyPi. I fixed it in a PR and it's been merged in, but a release hasn't been made yet (as of writing). Get PyOpenXR from the [GitHub repository](https://github.com/cmbruns/pyopenxr) instead.** Older versions may still function if you just want to test things out.

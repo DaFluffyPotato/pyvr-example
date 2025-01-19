@@ -4,7 +4,7 @@ moderngl==5.9.0
 noise==1.2.2
 numpy==2.2.2
 Pillow==10.1.0
-pygame==2.6.1
+pygame-ce==2.5.2
 PyGLM==2.7.1
 Pympler==1.1
 PyOgg==0.6.14a1
