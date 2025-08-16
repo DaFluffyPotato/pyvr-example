@@ -24,4 +24,8 @@ Some interactions are restricted to the applicable hand depending on how an item
 
 Health and kills (on your current life) are shown on the watch face. Extra mags for your current weapon are at your hips.
 
-**The PyOpenXR version listed in the requirements.txt is incorrect! There's a memory leak in the latest release available on PyPi. I fixed it in a PR and it's been merged in, but a release hasn't been made yet (as of writing). Get PyOpenXR from the [GitHub repository](https://github.com/cmbruns/pyopenxr) instead.** Older versions may still function if you just want to test things out.
+**Architecture:**
+I made an architecture chart for my private continuation of this project ([GunSlawVR](https://dafluffypotato.com/gunslaw)) so you can see how all the dependencies are used. The only difference between this and the latest architecture is the addition of my framework Shobnet for netcode, which doesn't exist in this demo. There's also not as much GLM usage in this demo, which makes the math quite spaghetti.
+![architecture_chart](architecture.png)
+
+**The PyOpenXR version listed in the requirements.txt may be incorrect! There was a memory leak in PyOpenXR when I was working on this project. I fixed it in a PR and it's been merged in, but the release was posted to PyPI after I forked GunSlaw VR to its own project, so I haven't tested this with it. The version in the requirements.txt is the first version with my fix in it (untested).**
