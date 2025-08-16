@@ -25,6 +25,7 @@ Some interactions are restricted to the applicable hand depending on how an item
 Health and kills (on your current life) are shown on the watch face. Extra mags for your current weapon are at your hips.
 
 **Architecture:**
+
 I made an architecture chart for my private continuation of this project ([GunSlawVR](https://dafluffypotato.com/gunslaw)) so you can see how all the dependencies are used. The only difference between this and the latest architecture is the addition of my framework Shobnet for netcode, which doesn't exist in this demo. There's also not as much GLM usage in this demo, which makes the math quite spaghetti.
 ![architecture_chart](architecture.png)
 
